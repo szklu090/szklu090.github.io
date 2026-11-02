@@ -1,7 +1,7 @@
 // ============================================================
 //  stol-kos — Service Worker (offline-first)
 // ============================================================
-const CACHE = 'stol-kos-v9';
+const CACHE = 'stol-kos-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
   './js/compute.js',
   './js/store.js',
   './js/google.js',
+  './js/sync.js',
   './js/ui.js',
   './js/views.js',
   './js/actions.js',

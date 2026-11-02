@@ -505,6 +505,18 @@
     refresh();
   }
 
+  function saveSync(form) {
+    const f = U.formToObject(form);
+    const st = S.get();
+    st.settings.sync = st.settings.sync || {};
+    st.settings.sync.url = String(f.syncUrl || '').trim();
+    st.settings.sync.token = String(f.syncToken || '');
+    st.settings.sync.auto = !!(form.elements.syncAuto && form.elements.syncAuto.checked);
+    S.save();
+    U.toast('Ustawienia bazy zapisane', 'ok');
+    refresh();
+  }
+
   /* ============================================================
      Google — akcje i wysyłka miesiąca
      ============================================================ */
@@ -699,6 +711,40 @@
     'sheets:recalc': function () { refresh(); },
     'sk:open-month': function (el) { openMonth(el && el.dataset.month); },
 
+    // Baza na serwerze (Google Apps Script)
+    'sync:push': function () {
+      if (!SK.sync) return;
+      U.toast('Wysyłam dane na serwer...');
+      SK.sync.push().then(function (r) {
+        U.toast('Zapisano na serwerze · ' + (r.entries || 0) + ' wpisów', 'ok');
+        refresh();
+      }).catch(function (e) { U.toast('Błąd: ' + e.message, 'err'); });
+    },
+    'sync:pull': function () {
+      if (!SK.sync) return;
+      U.confirmDialog('Pobrać dane z serwera? Obecne dane w aplikacji zostaną zastąpione.', {
+        title: 'Pobierz z serwera', confirmLabel: 'Pobierz',
+      }).then(function (ok) {
+        if (!ok) return;
+        U.toast('Pobieram z serwera...');
+        SK.sync.pull().then(function (data) {
+          SK.sync.applyRemote(data);
+          U.toast('Pobrano dane z serwera', 'ok');
+          refresh();
+        }).catch(function (e) { U.toast('Błąd: ' + e.message, 'err'); });
+      });
+    },
+    'sync:test': function () {
+      if (!SK.sync) return;
+      const c = (S.get().settings || {}).sync || {};
+      if (!String(c.url || '').trim()) { U.toast('Najpierw wpisz adres Web App', 'err'); return; }
+      U.toast('Sprawdzam serwer...');
+      SK.sync.push().then(function () {
+        U.toast('Serwer odpowiada i zapisał dane', 'ok');
+        refresh();
+      }).catch(function (e) { U.toast('Błąd: ' + e.message, 'err'); });
+    },
+
     'data:export-json': exportJson,
     'data:import-json': importJson,
     'data:import-csv': importCsv,
@@ -727,6 +773,7 @@
     goals: saveGoals,
     work: saveWork,
     google: saveGoogle,
+    sync: saveSync,
   };
 
   function run(name, el, event) {

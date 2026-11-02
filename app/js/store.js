@@ -8,6 +8,7 @@
   const KEY = 'stol-kos-v3';
   const LEGACY = ['stol-kos-v2', 'stol-kos-v1'];
   const DEFAULT_PROJECT = { name: 'Ogólny', color: '#84cc16' };
+  const saveHooks = [];
 
   function defaults() {
     return {
@@ -27,6 +28,7 @@
           clientId: '', spreadsheetId: '', sheetName: '',
           autoCalendar: true, notify: false,
         },
+        sync: { url: '', token: '', auto: true },
       },
       projects: [],
       entries: [],
@@ -80,6 +82,14 @@
           sheetName: str(g.sheetName, ''),
           autoCalendar: g.autoCalendar !== false,
           notify: !!g.notify,
+        };
+      })(),
+      sync: (function () {
+        const y = st.sync || {};
+        return {
+          url: str(y.url, ''),
+          token: str(y.token, ''),
+          auto: y.auto !== false,
         };
       })(),
     };
@@ -211,7 +221,11 @@
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
     catch (e) { console.error('save failed', e); }
+    for (let i = 0; i < saveHooks.length; i++) {
+      try { saveHooks[i](state); } catch (e) { /* ignore */ }
+    }
   }
+  function onSave(fn) { if (typeof fn === 'function') saveHooks.push(fn); return fn; }
 
   function get() { return state; }
   function replace(next) { state = normalize(next); save(); return state; }
@@ -483,7 +497,7 @@
   }
 
   SK.store = {
-    KEY, SNAP_KEY, load, save, get, replace, defaults, normalize,
+    KEY, SNAP_KEY, load, save, get, replace, defaults, normalize, onSave,
     projectById, rateOf, amountOf,
     addEntry, updateEntry, deleteEntry, restoreEntry, duplicateEntry, entryById, sortEntries, setEntryGcal,
     addProject, updateProject, deleteProject,

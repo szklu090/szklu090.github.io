@@ -324,6 +324,9 @@
     wire();
     refresh();
 
+    // synchronizacja z serwerem (auto-zapis po zmianie)
+    try { if (SK.sync && SK.sync.init) SK.sync.init(); } catch (e) { /* ignore */ }
+
     // przypomnienie o zamkniętym miesiącu (opcjonalne powiadomienie)
     try { if (SK.google && SK.google.notifyDue) SK.google.notifyDue(); } catch (e) { /* ignore */ }
 

@@ -777,14 +777,13 @@
       '</div>' +
       '<div class="form-grid">' +
       '<div class="field"><label>Miesiąc</label><input class="input" type="month" data-filter="settlements.month" value="' + esc(month) + '" /></div>' +
-      '<div class="field"><label>Dopisz godziny (+)</label><input class="input" id="sheet-extra" type="number" min="0" step="0.5" value="0" placeholder="0" /></div>' +
       '</div>' +
       '<div class="row wrap">' +
       '<button class="btn btn-primary btn-sm" data-action="sheets:send" data-month="' + esc(month) + '"' + (ready ? '' : ' disabled') + '>' + icon('send') + ' Wyślij do Skoroszytu</button>' +
       (connected ? '<button class="btn btn-sm" data-action="google:test">' + icon('plug-zap') + ' Testuj</button>' : '') +
       '<button class="btn btn-ghost btn-sm" data-action="sheets:open">' + icon('external-link') + ' Otwórz Skoroszyt</button>' +
       '</div>' +
-      '<div class="hint">Do arkusza trafia <b>tylko suma godzin</b> — bez danych dziennych i bez kolumny „Miejsce pracy".</div>' +
+      '<div class="hint">Do arkusza trafiają tylko godziny <b>od</b> i <b>do</b> — ilość godzin i sumy liczy formuła arkusza.</div>' +
       statusHtml +
       '</div>');
   }
@@ -959,7 +958,49 @@
       '<button type="button" class="btn btn-sm" data-action="google:test">' + icon('plug-zap') + ' Testuj połączenie</button>' +
       '<button type="button" class="btn btn-sm" data-action="sheets:send">' + icon('send') + ' Wyślij ten miesiąc</button>' +
       '</div>' +
-      '<div class="hint">Do arkusza trafia <b>tylko suma godzin</b>. Zakładka miesiąca zostanie utworzona, jeśli jej nie ma.</div>' +
+      '<div class="hint">Do arkusza trafiają tylko godziny <b>od</b> i <b>do</b> — ilość godzin i sumy liczy formuła arkusza. Zakładka miesiąca zostanie utworzona, jeśli jej nie ma.</div>' +
+      instr +
+      '</form>');
+  }
+
+  function syncCard() {
+    const st = S.get();
+    const c = (st.settings || {}).sync || {};
+    const Y = SK.sync;
+    const s = Y ? Y.status() : { ready: false, lastAt: '', lastError: '', auto: true };
+    let last = '—';
+    if (s.lastAt) {
+      try {
+        const d = new Date(s.lastAt);
+        last = C.fullDate(d) + ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) { last = s.lastAt; }
+    }
+
+    const instr = '<details class="instr"><summary>' + icon('help-circle') + ' Jak włączyć bazę na serwerze (krok po kroku)</summary>' +
+      '<ol>' +
+      '<li>Wejdź na <b>script.google.com</b> → <b>Nowy projekt</b>.</li>' +
+      '<li>Wklej kod z pliku <span class="kbd">Code.gs</span> (dostałeś go razem z aplikacją).</li>' +
+      '<li><b>Projekt → Ustawienia projektu → Właściwości skryptu</b> → dodaj <span class="kbd">SECRET</span> = Twój sekret.</li>' +
+      '<li><b>Wdróż → Nowe wdrożenie</b> → typ <b>Aplikacja internetowa</b>.</li>' +
+      '<li>„Wykonaj jako”: <b>Ja</b>; „Kto ma dostęp”: <b>Każdy</b> → wdróż i skopiuj adres <span class="kbd">/exec</span>.</li>' +
+      '<li>Wklej adres i sekret poniżej, zapisz i kliknij <b>Test</b>.</li>' +
+      '</ol>' +
+      '<p class="hint">Dane trafiają do arkusza <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie.</p>' +
+      '</details>';
+
+    return card('Baza na serwerze (Google)', 'cloud-upload', '<form data-form="sync" class="stack">' +
+      '<div class="row between"><span class="muted">Status</span>' +
+      (s.ready ? '<span class="badge ok">' + icon('check') + ' Skonfigurowano</span>' : '<span class="badge warn">' + icon('x') + ' Nie skonfigurowano</span>') + '</div>' +
+      '<div class="field full"><label>Adres Web App (URL)</label><input class="input" name="syncUrl" value="' + esc(c.url || '') + '" placeholder="https://script.google.com/macros/s/.../exec" /></div>' +
+      '<div class="field full"><label>Sekret (opcjonalnie)</label><input class="input" name="syncToken" value="' + esc(c.token || '') + '" placeholder="np. moj-sekret-123" /></div>' +
+      '<div class="row between"><span>Wysyłaj automatycznie po zmianie</span><label class="switch"><input type="checkbox" name="syncAuto"' + (c.auto !== false ? ' checked' : '') + ' /><span class="sl"></span></label></div>' +
+      '<div class="row wrap">' +
+      '<button class="btn btn-primary btn-sm" type="submit">' + icon('save') + ' Zapisz</button>' +
+      '<button type="button" class="btn btn-sm" data-action="sync:push">' + icon('upload-cloud') + ' Wyślij teraz</button>' +
+      '<button type="button" class="btn btn-sm" data-action="sync:pull">' + icon('download-cloud') + ' Pobierz z serwera</button>' +
+      '<button type="button" class="btn btn-sm" data-action="sync:test">' + icon('plug-zap') + ' Test</button>' +
+      '</div>' +
+      '<div class="hint">Ostatni zapis: <b>' + esc(last) + '</b>' + (s.lastError ? ' · <span style="color:var(--danger,#ef4444)">błąd: ' + esc(s.lastError) + '</span>' : '') + '</div>' +
       instr +
       '</form>');
   }
@@ -1034,13 +1075,13 @@
       '</div>');
 
     const about = card('O aplikacji', 'info', '<div class="stack" style="font-size:.86rem">' +
-      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.3</b></div>' +
+      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.4</b></div>' +
       '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">localStorage</b></div>' +
       '<div class="row between"><span class="muted">Tryb</span><b>offline-first (PWA)</b></div>' +
       '<div class="hint">Skróty: <span class="kbd">Ctrl K</span> paleta · <span class="kbd">N</span> nowy wpis · <span class="kbd">Esc</span> zamknij.</div>' +
       '</div>');
 
-    return '<div class="grid g-2">' + profile + goals + work + googleCard() + templates + appearance + data + about + '</div>';
+    return '<div class="grid g-2">' + profile + goals + work + googleCard() + syncCard() + templates + appearance + data + about + '</div>';
   }
 
   /* ============================================================

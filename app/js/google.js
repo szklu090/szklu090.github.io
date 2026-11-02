@@ -337,9 +337,35 @@
 
   function quoteSheet(title) { return "'" + String(title).replace(/'/g, "''") + "'"; }
 
+  /** Formuła „ilość godz" dla wiersza dnia — liczy arkusz, nie aplikacja. */
+  function hoursFormula(row) {
+    // (do - od + (do < od)) * 24 — obsługuje też zmianę przez północ;
+    // bez argumentów funkcji, więc działa w każdym locale arkusza.
+    return '=(D' + row + '-C' + row + '+(D' + row + '<C' + row + '))*24';
+  }
+
+  /** Wiersze dni z wpisami: dla każdego dnia tylko „od" i „do". */
+  function dayTimeRows(monthKey) {
+    const st = S.get();
+    const out = [];
+    for (let d = 1; d <= 31; d++) {
+      const key = monthKey + '-' + String(d).padStart(2, '0');
+      const items = (st.entries || []).filter(function (e) { return e.date === key; });
+      if (!items.length) continue;
+      let start = null, end = null;
+      items.forEach(function (e) {
+        if (e.start && (start === null || e.start < start)) start = e.start;
+        if (e.end && (end === null || e.end > end)) end = e.end;
+      });
+      out.push({ row: 4 + d, start: start, end: end });
+    }
+    return out;
+  }
+
   /**
-   * Wysyła sumę godzin miesiąca do zakładki miesiąca.
-   * extraHours — godziny dopisane w oknie rozliczenia (doliczane do sumy).
+   * Wysyła do zakładki miesiąca TYLKO godziny „od" i „do" dla dni z wpisami.
+   * Ilość godzin i sumy liczą formuły arkusza — aplikacja ich nie nadpisuje.
+   * extraHours — godziny dopisane w oknie rozliczenia (tylko do podsumowania w aplikacji).
    */
   function exportMonth(monthKey, extraHours) {
     let id;
@@ -352,18 +378,25 @@
 
     return sheetTitles(id).then(function (info) {
       const exists = info.sheets.indexOf(target) >= 0;
+      const q = quoteSheet(target);
       const create = exists ? Promise.resolve() : addSheet(id, target).then(function () {
-        return batchUpdateValues(id, [{ range: quoteSheet(target) + '!A1:E40', values: sheetTemplate(stats) }]);
+        return batchUpdateValues(id, [{ range: q + '!A1:E40', values: sheetTemplate(stats) }]);
       });
       return create.then(function () {
-        const q = quoteSheet(target);
-        return batchUpdateValues(id, [
-          { range: q + '!B1', values: [[stats.labelUpper]] },
-          { range: q + '!D3', values: [[stats.hours]] },
-          { range: q + '!E36', values: [[stats.hours]] },
-          { range: q + '!D39', values: [[stats.hours]] },
-          { range: q + '!D40', values: [[stats.amount]] },
-        ]);
+        const data = [];
+        // 1) TYLKO „od” i „do” dla dni z wpisami (kolumny C i D).
+        dayTimeRows(monthKey).forEach(function (d) {
+          data.push({ range: q + '!C' + d.row + ':D' + d.row, values: [[d.start || '', d.end || '']] });
+        });
+        // 2) Formuły automatyczne: ilość godzin z „od/do” oraz sumy.
+        for (let day = 1; day <= 31; day++) {
+          const r = 4 + day;
+          data.push({ range: q + '!E' + r, values: [[hoursFormula(r)]] });
+        }
+        data.push({ range: q + '!D3', values: [['=D39']] });
+        data.push({ range: q + '!E36', values: [['=SUM(E5:E35)']] });
+        data.push({ range: q + '!D39', values: [['=SUM(E5:E35)']] });
+        return batchUpdateValues(id, data);
       }).then(function () {
         const url = 'https://docs.google.com/spreadsheets/d/' + id;
         S.markMonthExported(monthKey, {
@@ -481,42 +514,44 @@
     };
   }
 
-  /**
-   * Buduje obiekt wydarzenia Google dla wpisu.
-   * Uzupełniamy WYŁĄCZNIE „od" i „do" — czas trwania liczy sam Kalendarz Google,
-   * więc nie wpisujemy nigdzie ilości godzin.
-   */
+  /** Buduje obiekt wydarzenia Google dla wpisu. */
   function entryToEvent(entry, name) {
     const t = eventTimes(entry);
     const title = (name ? name + ' — ' : '') + (entry.note || 'Praca');
+    const dur = C.durationMin(entry);
     return {
       summary: title,
-      description: 'STOL-KOS',
+      description: 'STOL-KOS\n' + (name || 'Bez projektu') +
+        (entry.note ? '\n' + entry.note : '') +
+        '\nCzas: ' + C.fmtHM(dur),
       start: t.start,
       end: t.end,
     };
   }
 
   /**
-   * Szablon zakładki miesiąca — dokładnie jak w Skoroszycie:
+   * Szablon zakładki miesiąca — jak w Skoroszycie:
    * MIESIĄC / IMIĘ / godziny / tabela dni / wiersze sum.
+   * Kolumna „ilość godz" to FORMULA liczona przez arkusz z „od" i „do".
    * Zwraca macierz 40 wierszy × 5 kolumn (A..E).
    */
   function sheetTemplate(stats) {
     const labelUpper = stats && stats.labelUpper ? stats.labelUpper : monthLabelUpper(stats && stats.key);
-    const hours = stats ? stats.hours : 0;
     const amount = stats ? stats.amount : 0;
     const rows = [];
     rows.push(['MIESIĄC', labelUpper, '', '', '']);
     rows.push(['IMIĘ', '', '', '', '']);
-    rows.push(['', '', 'godziny', hours, '']);
+    rows.push(['', '', 'godziny', '=D39', '']);
     rows.push(['Dzień', 'Miejsce pracy', 'od', 'do', 'ilość godz']);
-    for (let d = 1; d <= 31; d++) rows.push([d, '', '', '', '']);
-    rows.push(['', '', '', 'Suma Godzin', hours]);   // wiersz 36
-    rows.push(['', '', '', '', '']);                  // 37
-    rows.push(['', '', '', '', '']);                  // 38
-    rows.push(['', 'SUMA GODZIN', '', hours, 'godzin']); // 39
-    rows.push(['', 'Do Wypłaty', '', amount, 'zł']);     // 40
+    for (let d = 1; d <= 31; d++) {
+      const r = 4 + d;
+      rows.push([d, '', '', '', hoursFormula(r)]);
+    }
+    rows.push(['', '', '', 'Suma Godzin', '=SUM(E5:E35)']); // wiersz 36
+    rows.push(['', '', '', '', '']);                        // 37
+    rows.push(['', '', '', '', '']);                        // 38
+    rows.push(['', 'SUMA GODZIN', '', '=SUM(E5:E35)', 'godzin']); // 39
+    rows.push(['', 'Do Wypłaty', '', amount, 'zł']);        // 40
     return rows;
   }
 
@@ -556,7 +591,7 @@
     // kalendarz
     pushEntry, removeEvent, autoPush, autoRemove,
     // skoroszyt
-    testSheet, exportMonth, sheetTitles, extractSpreadsheetId,
+    testSheet, exportMonth, sheetTitles, extractSpreadsheetId, dayTimeRows, hoursFormula,
     // przypomnienia
     dueMonths, notifyDue,
     // czyste helpery (testy)
