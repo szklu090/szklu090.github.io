@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>STOL-KOS — ewidencja czasu pracy</title>
+<style>
+  :root { color-scheme: dark light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+         background: #0f1420; color: #e7ecf3; line-height: 1.6; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 22px 64px; }
+  h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: .5px; }
+  .tag { color: #8fa3bf; margin: 0 0 28px; font-size: 1.05rem; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; color: #a9c4ff; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0 8px 20px; }
+  a { color: #7fb0ff; }
+  nav { margin-top: 36px; padding-top: 20px; border-top: 1px solid #263148; }
+  nav a { margin-right: 14px; }
+  .card { background: #161d2c; border: 1px solid #263148; border-radius: 12px; padding: 18px 20px; margin-top: 20px; }
+  footer { margin-top: 40px; color: #7d8ba3; font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>STOL-KOS</h1>
+  <p class="tag">Ewidencja czasu pracy, rozliczenia i analityka.</p>
+
+  <p>
+    <strong>STOL-KOS</strong> to osobista aplikacja do prowadzenia ewidencji czasu pracy.
+    Pozwala zapisywać wpisy z godzinami rozpoczęcia i zakończenia, liczyć sumy dzienne
+    i miesięczne, tworzyć rozliczenia oraz przeglądać proste analizy i statystyki.
+  </p>
+
+  <h2>Jak działa</h2>
+  <ul>
+    <li>Wszystkie dane (wpisy, ustawienia, rozliczenia) są przechowywane <strong>lokalnie na urządzeniu użytkownika</strong>.</li>
+    <li>Aplikacja <strong>nie posiada backendu</strong> — nie wysyła danych na żadne serwery pośredniczące.</li>
+    <li>Działa jako strona internetowa (PWA) oraz jako aplikacja na Androida.</li>
+  </ul>
+
+  <h2>Integracja z Google (opcjonalna)</h2>
+  <p>
+    Na życzenie użytkownika aplikacja może łączyć się z jego kontem Google w dwóch celach:
+  </p>
+  <ul>
+    <li><strong>Kalendarz Google</strong> — każdy zapisany wpis jest dopisywany jako wydarzenie w kalendarzu użytkownika (aktualizowane lub usuwane razem z wpisem).</li>
+    <li><strong>Arkusz Google</strong> — po zakończeniu miesiąca miesięczna suma godzin jest zapisywana w zakładce miesiąca w arkuszu wskazanym przez użytkownika.</li>
+  </ul>
+  <p>
+    Dostęp do Google jest włączany wyłącznie przez użytkownika i można go w każdej chwili wyłączyć.
+  </p>
+
+  <div class="card">
+    <h2 style="margin-top:0">Dokumenty</h2>
+    <p>
+      <a href="privacy.html">Polityka prywatności</a> &nbsp;·&nbsp;
+      <a href="terms.html">Warunki korzystania</a>
+    </p>
+  </div>
+
+  <footer>
+    Kontakt: <a href="mailto:szymonkludziak0@gmail.com">szymonkludziak0@gmail.com</a><br />
+    Aplikacja do użytku prywatnego.
+  </footer>
+</main>
+</body>
+</html>
