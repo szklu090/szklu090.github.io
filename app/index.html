@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#070b14" />
+  <meta name="description" content="STOL-KOS — ewidencja czasu pracy, rozliczenia i analityka zarobków" />
+  <title>STOL-KOS — Ewidencja czasu</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="STOL-KOS" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="shortcut icon" href="icon.svg" />
+
+  <!-- Wczesne ustawienie motywu (bez mignięcia) -->
+  <script>
+    try {
+      var _s = JSON.parse(localStorage.getItem('stol-kos-v3') || '{}');
+      var _t = (_s.profile && _s.profile.theme) || 'dark';
+      document.documentElement.dataset.theme = _t;
+    } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+  </script>
+
+  <!-- Tailwind (lokalny build, offline) + własny design system -->
+  <link rel="stylesheet" href="tailwind.css" />
+  <link rel="stylesheet" href="css/app.css" />
+
+  <!-- Lucide (lokalnie, offline) -->
+  <script src="lucide.js"></script>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#84cc16" />
+        <stop offset="100%" stop-color="#22d3ee" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="app-shell">
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo"><i data-lucide="clock-3"></i></div>
+        <div>
+          <div class="brand-title">STOL-KOS</div>
+          <div class="brand-sub">time · money</div>
+        </div>
+      </div>
+
+      <div class="nav-group-label">Praca</div>
+      <button class="nav-item" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span>Pulpit</span></button>
+      <button class="nav-item" data-page="entries"><i data-lucide="list-checks"></i><span>Wpisy</span><span class="nav-count" id="nav-count-entries"></span></button>
+      <button class="nav-item" data-page="calendar"><i data-lucide="calendar-days"></i><span>Kalendarz</span></button>
+      <button class="nav-item" data-page="add"><i data-lucide="plus-circle"></i><span>Dodaj wpis</span></button>
+
+      <div class="nav-group-label">Analiza</div>
+      <button class="nav-item" data-page="stats"><i data-lucide="bar-chart-3"></i><span>Statystyki</span></button>
+      <button class="nav-item" data-page="settlements"><i data-lucide="receipt"></i><span>Rozliczenia</span></button>
+
+      <div class="nav-group-label">Konfiguracja</div>
+      <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i><span>Projekty</span></button>
+      <button class="nav-item" data-page="settings"><i data-lucide="settings-2"></i><span>Ustawienia</span></button>
+
+      <div class="sidebar-foot">
+        <div class="row between" style="padding:4px 8px 10px">
+          <span class="dim" style="font-size:.7rem">Motyw</span>
+          <button class="btn btn-icon btn-ghost" id="theme-toggle" title="Przełącz motyw" aria-label="Przełącz motyw"><i data-lucide="moon"></i></button>
+        </div>
+        <div class="row between" style="padding:0 8px">
+          <span class="dim" style="font-size:.68rem">STOL-KOS v3.4</span>
+          <span class="dim" style="font-size:.68rem" id="storage-info">offline</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <div class="main">
+      <!-- mobile header -->
+      <div class="mobile-top">
+        <div class="brand-logo" style="width:34px;height:34px;border-radius:11px"><i data-lucide="clock-3"></i></div>
+        <div class="brand-title">STOL-KOS</div>
+        <div class="topbar-actions">
+          <button class="btn btn-icon btn-ghost" id="m-theme-toggle" title="Motyw"><i data-lucide="moon"></i></button>
+          <button class="btn btn-icon btn-ghost" id="m-search" title="Szukaj"><i data-lucide="search"></i></button>
+        </div>
+      </div>
+
+      <header class="topbar">
+        <div>
+          <h1 id="page-title">Pulpit</h1>
+          <div class="sub" id="page-sub">Przegląd Twojej pracy</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" id="palette-btn" title="Szybkie polecenia (Ctrl+K)">
+            <i data-lucide="search"></i><span class="nowrap">Szukaj</span><span class="kbd">Ctrl K</span>
+          </button>
+          <button class="btn btn-primary btn-sm" data-page="add"><i data-lucide="plus"></i><span class="nowrap">Nowy wpis</span></button>
+        </div>
+      </header>
+
+      <main class="content" id="content">
+        <section class="page active" id="page-dashboard"></section>
+        <section class="page" id="page-entries"></section>
+        <section class="page" id="page-calendar"></section>
+        <section class="page" id="page-add"></section>
+        <section class="page" id="page-stats"></section>
+        <section class="page" id="page-settlements"></section>
+        <section class="page" id="page-projects"></section>
+        <section class="page" id="page-settings"></section>
+      </main>
+    </div>
+  </div>
+
+  <!-- mobile bottom nav -->
+  <nav class="bottom-nav" aria-label="Nawigacja">
+    <button class="bn" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span>Pulpit</span></button>
+    <button class="bn" data-page="entries"><i data-lucide="list-checks"></i><span>Wpisy</span></button>
+    <button class="bn" data-page="calendar"><i data-lucide="calendar-days"></i><span>Kalendarz</span></button>
+    <button class="bn" data-page="add"><i data-lucide="plus-circle"></i><span>Dodaj</span></button>
+    <button class="bn" data-page="stats"><i data-lucide="bar-chart-3"></i><span>Statystyki</span></button>
+    <button class="bn" data-page="settings"><i data-lucide="settings-2"></i><span>Ustawienia</span></button>
+  </nav>
+
+  <!-- roots -->
+  <div class="toast-root" id="toast-root" aria-live="polite"></div>
+  <div class="modal-root" id="modal-root"></div>
+  <div class="palette-root" id="palette-root">
+    <div class="palette">
+      <input id="palette-input" type="text" placeholder="Szukaj strony, wpisu lub akcji…" autocomplete="off" />
+      <div class="palette-list" id="palette-list"></div>
+    </div>
+  </div>
+
+  <!-- skrypty aplikacji -->
+  <script src="js/compute.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/google.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/actions.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
