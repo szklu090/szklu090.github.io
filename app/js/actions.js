@@ -791,10 +791,12 @@
       const c = (S.get().settings || {}).sync || {};
       const u = String(c.url || '').trim();
       if (!u) { U.toast('Najpierw wpisz adres Web App i zapisz', 'err'); return; }
-      const base = root.location.origin + root.location.pathname;
-      const link = base + '?sync=' + encodeURIComponent(u) +
-        (c.token ? '&secret=' + encodeURIComponent(c.token) : '') +
-        (c.auto === false ? '&auto=0' : '');
+      const q = new root.URLSearchParams();
+      q.set('v', '36');
+      q.set('sync', u);
+      if (c.token) q.set('secret', c.token);
+      if (c.auto === false) q.set('auto', '0');
+      const link = root.location.origin + root.location.pathname + '?' + q.toString();
 
       const done = function () { U.toast('Link skopiowany — wyślij go na inne urządzenie', 'ok'); };
       const fail = function () { copyFallback(link) ? done() : U.toast('Nie udało się skopiować. Skopiuj ręcznie: ' + link, 'err'); };

@@ -1,31 +1,41 @@
 // ============================================================
 //  stol-kos — Service Worker (offline-first)
 // ============================================================
-const CACHE = 'stol-kos-v15';
+const CACHE = 'stol-kos-v17';
 const ASSETS = [
   './',
   './index.html',
-  './tailwind.css',
-  './css/app.css',
-  './lucide.js',
+  './tailwind.css?v=36',
+  './css/app.css?v=36',
+  './lucide.js?v=36',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './js/compute.js',
-  './js/store.js',
-  './js/google.js',
-  './js/sync.js',
-  './js/ui.js',
-  './js/notify.js',
-  './js/views.js',
-  './js/actions.js',
-  './js/main.js',
+  './js/compute.js?v=36',
+  './js/store.js?v=36',
+  './js/google.js?v=36',
+  './js/sync.js?v=36',
+  './js/ui.js?v=36',
+  './js/notify.js?v=36',
+  './js/views.js?v=36',
+  './js/actions.js?v=36',
+  './js/main.js?v=36',
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
+  // cache: 'reload' omija stary HTTP cache — instalujemy zawsze świeże pliki.
+  e.waitUntil(
+    caches.open(CACHE).then(async (c) => {
+      await Promise.all(ASSETS.map(async (url) => {
+        try {
+          const res = await fetch(url, { cache: 'reload' });
+          if (res && res.status === 200) await c.put(url, res);
+        } catch (err) { /* pojedynczy plik może się nie pobrać */ }
+      }));
+    }).catch(() => {})
+  );
   self.skipWaiting();
 });
 
@@ -52,14 +62,14 @@ self.addEventListener('fetch', (e) => {
           caches.open(CACHE).then(c => c.put(req, clone)).catch(() => {});
         }
         return res;
-      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+      }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
     );
     return;
   }
 
   // Cache-first for local assets, network fallback.
   e.respondWith(
-    caches.match(req).then(cached => {
+    caches.match(req, { ignoreSearch: true }).then(cached => {
       if (cached) return cached;
       return fetch(req).then(res => {
         if (!res || res.status !== 200 || res.type === 'opaque') return res;

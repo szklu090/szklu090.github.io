@@ -984,7 +984,7 @@
       '<li>(opcjonalnie) dodaj <span class="kbd">OWNER_EMAIL</span> = Twój e-mail — dostaniesz powiadomienie, gdy połączy się nowe urządzenie.</li>' +
       '<li><b>Wdróż → Nowe wdrożenie</b> → typ <b>Aplikacja internetowa</b>.</li>' +
       '<li>„Wykonaj jako”: <b>Ja</b>; „Kto ma dostęp”: <b>Każdy</b> → wdróż i skopiuj adres <span class="kbd">/exec</span>.</li>' +
-      '<li>Wklej adres i sekret poniżej, zapisz i kliknij <b>Test</b>.</li>' +
+      '<li>Adres bazy jest już wpisany — wpisz tylko sekret (jeśli go ustawiłeś), zapisz i kliknij <b>Test</b>.</li>' +
       '</ol>' +
       '<p class="hint">Dane trafiają do arkusza <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie. Zdarzenia synchronizacji znajdziesz pod dzwonkiem 🔔 w nagłówku.</p>' +
       '</details>';
@@ -992,6 +992,7 @@
     return card('Baza na serwerze (Google)', 'cloud-upload', '<form data-form="sync" class="stack">' +
       '<div class="row between"><span class="muted">Status</span>' +
       (s.ready ? '<span class="badge ok">' + icon('check') + ' Skonfigurowano</span>' : '<span class="badge warn">' + icon('x') + ' Nie skonfigurowano</span>') + '</div>' +
+      (s.ready && !c.token ? '<div class="hint" style="color:var(--warn,#f59e0b)">' + icon('key-round') + ' Adres bazy jest już wpisany. Wpisz sekret, jeśli ustawiłeś go w Apps Script.</div>' : '') +
       '<div class="field full"><label>Masz link do konfiguracji? Wklej go tutaj</label><input class="input" name="syncLink" placeholder="https://.../?sync=...&secret=..." /></div>' +
       '<div class="field full"><label>Adres Web App (URL)</label><input class="input" name="syncUrl" value="' + esc(c.url || '') + '" placeholder="https://script.google.com/macros/s/.../exec" /></div>' +
       '<div class="field full"><label>Sekret (opcjonalnie)</label><input class="input" name="syncToken" value="' + esc(c.token || '') + '" placeholder="np. moj-sekret-123" /></div>' +

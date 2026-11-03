@@ -11,6 +11,8 @@
   // Domyślny Client ID OAuth (aplikacja internetowa) — wpisany na stałe,
   // żeby nie trzeba było go podawać na każdym urządzeniu.
   const DEFAULT_GOOGLE_CLIENT_ID = '842623869384-64u6uvii79jl4ph7cif2i28m3sa1ngjo.apps.googleusercontent.com';
+  // Domyślny adres bazy (Google Apps Script). Sekret użytkownik wpisuje sam.
+  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwjMHg4Er6qKV5cZ_dQ9CRkRlqKyUYaecL3Nvis-ItjlW0Ul1JJQjKrUULcTv75h-zN/exec';
   const saveHooks = [];
 
   function defaults() {
@@ -31,7 +33,7 @@
           clientId: DEFAULT_GOOGLE_CLIENT_ID, spreadsheetId: '', sheetName: '',
           autoCalendar: true, notify: false,
         },
-        sync: { url: '', token: '', auto: true },
+        sync: { url: DEFAULT_SYNC_URL, token: '', auto: true },
       },
       projects: [],
       entries: [],
@@ -90,7 +92,7 @@
       sync: (function () {
         const y = st.sync || {};
         return {
-          url: str(y.url, ''),
+          url: str(y.url, '') || DEFAULT_SYNC_URL,
           token: str(y.token, ''),
           auto: y.auto !== false,
         };
