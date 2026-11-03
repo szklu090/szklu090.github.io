@@ -16,6 +16,23 @@
   function go(p) { SK.main.go(p); }
   const money = function (v) { return C.money(v, S.get().profile.currency); };
 
+  /** Kopiowanie do schowka bez Clipboard API (starsze przeglądarki / http). */
+  function copyFallback(text) {
+    try {
+      const ta = doc.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      doc.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = doc.execCommand && doc.execCommand('copy');
+      doc.body.removeChild(ta);
+      return !!ok;
+    } catch (e) { return false; }
+  }
+
   /* ============================================================
      Kalendarz
      ============================================================ */
@@ -743,6 +760,23 @@
         U.toast('Serwer odpowiada i zapisał dane', 'ok');
         refresh();
       }).catch(function (e) { U.toast('Błąd: ' + e.message, 'err'); });
+    },
+    'sync:link': function () {
+      const c = (S.get().settings || {}).sync || {};
+      const u = String(c.url || '').trim();
+      if (!u) { U.toast('Najpierw wpisz adres Web App i zapisz', 'err'); return; }
+      const base = root.location.origin + root.location.pathname;
+      const link = base + '?sync=' + encodeURIComponent(u) +
+        (c.token ? '&secret=' + encodeURIComponent(c.token) : '') +
+        (c.auto === false ? '&auto=0' : '');
+
+      const done = function () { U.toast('Link skopiowany — wyślij go na inne urządzenie', 'ok'); };
+      const fail = function () { copyFallback(link) ? done() : U.toast('Nie udało się skopiować. Skopiuj ręcznie: ' + link, 'err'); };
+      try {
+        if (root.navigator && root.navigator.clipboard && root.navigator.clipboard.writeText) {
+          root.navigator.clipboard.writeText(link).then(done, fail);
+        } else { fail(); }
+      } catch (e) { fail(); }
     },
 
     'data:export-json': exportJson,

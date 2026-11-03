@@ -999,7 +999,9 @@
       '<button type="button" class="btn btn-sm" data-action="sync:push">' + icon('upload-cloud') + ' Wyślij teraz</button>' +
       '<button type="button" class="btn btn-sm" data-action="sync:pull">' + icon('download-cloud') + ' Pobierz z serwera</button>' +
       '<button type="button" class="btn btn-sm" data-action="sync:test">' + icon('plug-zap') + ' Test</button>' +
+      '<button type="button" class="btn btn-sm" data-action="sync:link"' + (s.ready ? '' : ' disabled') + '>' + icon('link') + ' Kopiuj link do konfiguracji</button>' +
       '</div>' +
+      '<div class="hint">Otwórz ten link na innym urządzeniu (telefon, drugi komputer) — baza ustawi się sama, bez wpisywania adresu i sekretu.</div>' +
       '<div class="hint">Ostatni zapis: <b>' + esc(last) + '</b>' + (s.lastError ? ' · <span style="color:var(--danger,#ef4444)">błąd: ' + esc(s.lastError) + '</span>' : '') + '</div>' +
       instr +
       '</form>');

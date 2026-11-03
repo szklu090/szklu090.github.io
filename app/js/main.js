@@ -311,9 +311,28 @@
   /* ============================================================
      Start
      ============================================================ */
+  function applySyncFromUrl() {
+    try {
+      const q = new root.URLSearchParams(root.location.search || '');
+      const u = q.get('sync') || q.get('syncUrl');
+      if (!u) return false;
+      const st = S.get();
+      st.settings.sync = st.settings.sync || {};
+      st.settings.sync.url = String(u).trim();
+      if (q.get('secret') != null) st.settings.sync.token = q.get('secret');
+      st.settings.sync.auto = q.get('auto') !== '0';
+      S.save();
+      try {
+        root.history.replaceState(null, '', root.location.pathname + (root.location.hash || ''));
+      } catch (e) { /* ignore */ }
+      return true;
+    } catch (e) { return false; }
+  }
+
   function init() {
     const st = S.load();
     U.applyTheme(st.profile.theme || 'dark');
+    applySyncFromUrl();
 
     const h = (root.location.hash || '').replace('#', '');
     current = V.meta[h] ? h : 'dashboard';
