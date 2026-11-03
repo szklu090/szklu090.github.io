@@ -8,6 +8,9 @@
   const KEY = 'stol-kos-v3';
   const LEGACY = ['stol-kos-v2', 'stol-kos-v1'];
   const DEFAULT_PROJECT = { name: 'Ogólny', color: '#84cc16' };
+  // Domyślny Client ID OAuth (aplikacja internetowa) — wpisany na stałe,
+  // żeby nie trzeba było go podawać na każdym urządzeniu.
+  const DEFAULT_GOOGLE_CLIENT_ID = '842623869384-64u6uvii79jl4ph7cif2i28m3sa1ngjo.apps.googleusercontent.com';
   const saveHooks = [];
 
   function defaults() {
@@ -25,7 +28,7 @@
         otAfter: 0, otMultiplier: 1.5,
         roundTo: 0,
         google: {
-          clientId: '', spreadsheetId: '', sheetName: '',
+          clientId: DEFAULT_GOOGLE_CLIENT_ID, spreadsheetId: '', sheetName: '',
           autoCalendar: true, notify: false,
         },
         sync: { url: '', token: '', auto: true },
@@ -77,7 +80,7 @@
       google: (function () {
         const g = st.google || {};
         return {
-          clientId: str(g.clientId, ''),
+          clientId: str(g.clientId, '') || DEFAULT_GOOGLE_CLIENT_ID,
           spreadsheetId: str(g.spreadsheetId, ''),
           sheetName: str(g.sheetName, ''),
           autoCalendar: g.autoCalendar !== false,

@@ -933,7 +933,7 @@
       '<li>W <b>Ekranie zgody OAuth</b> (Odbiorcy) kliknij <b>Opublikuj aplikację</b> — dzięki temu nie trzeba logować się co 7 dni.</li>' +
       '<li>W <b>Danych logowania</b> → „Utwórz dane logowania” → <b>Identyfikator klienta OAuth</b> → typ <b>Aplikacja internetowa</b>.</li>' +
       '<li>W „Autoryzowanych źródłach JavaScript” dodaj: <span class="kbd">https://szklu090.github.io</span></li>' +
-      '<li>Skopiuj <b>Client ID</b> i wklej w pole powyżej.</li>' +
+      '<li>Client ID jest już wpisany w aplikacji — nie musisz go podawać.</li>' +
       '<li>Kliknij <b>Połącz z Google</b> i zaakceptuj dostęp do Kalendarza i Skoroszytu.</li>' +
       '</ol>' +
       '<p class="hint">Aplikacja działa w przeglądarce (PWA) pod adresem <span class="kbd">https://szklu090.github.io/app/</span>. Wpisy trafiają do Kalendarza jako wydarzenie z godziną „od” i „do” — czas trwania liczy sam Kalendarz.</p>' +
@@ -944,9 +944,9 @@
     return card('Google (Kalendarz i Skoroszyt)', 'cloud', '<form data-form="google" class="stack">' +
       '<div class="row between"><span class="muted">Status</span>' +
       (connected ? '<span class="badge ok">' + icon('check') + ' Połączono</span>' : '<span class="badge warn">' + icon('x') + ' Nie połączono</span>') + '</div>' +
-      (notReady ? '<div class="hint" style="color:var(--warn,#f59e0b)">' + icon('alert-triangle') + ' Dodawanie do Kalendarza jest włączone, ale Google nie jest podłączone — wpisy NIE trafią do Kalendarza, dopóki nie wpiszesz Client ID i nie klikniesz „Połącz z Google”.</div>' : '') +
+      (notReady ? '<div class="hint" style="color:var(--warn,#f59e0b)">' + icon('alert-triangle') + ' Dodawanie do Kalendarza jest włączone, ale Google nie jest podłączone — wpisy NIE trafią do Kalendarza, dopóki nie klikniesz „Połącz z Google”.</div>' : '') +
       (s.native ? '<div class="hint">' + icon('smartphone') + ' Tryb aplikacji Android — logowanie natywne (bez WebView).</div>' : '') +
-      '<div class="field full"><label>Client ID Google (aplikacja internetowa)</label><input class="input" name="clientId" value="' + esc(g.clientId || '') + '" placeholder="np. 1234567890-abcd.apps.googleusercontent.com" /></div>' +
+      '<div class="field full"><label>Client ID Google (aplikacja internetowa)</label><input class="input" name="clientId" value="' + esc(g.clientId || '') + '" placeholder="np. 1234567890-abcd.apps.googleusercontent.com" /><div class="hint" style="margin-top:4px">Wpisany domyślnie — możesz zostawić bez zmian.</div></div>' +
       '<div class="field full"><label>Link / ID Skoroszytu</label><input class="input" name="spreadsheetId" value="' + esc(g.spreadsheetId || '') + '" placeholder="https://docs.google.com/spreadsheets/d/..." /></div>' +
       '<div class="field full"><label>Nazwa zakładki (opcjonalnie)</label><input class="input" name="sheetName" value="' + esc(g.sheetName || '') + '" placeholder="Zostaw puste = nazwy miesięcy (Listopad, Grudzień...)" /></div>' +
       onoff('autoCalendar', g.autoCalendar !== false, 'Dodawaj wpisy do Kalendarza Google') +
