@@ -109,6 +109,8 @@
 
   /* ---------------- wysyłka ---------------- */
   let saving = null;
+  let blockedToken = null; // sekret, przy którym serwer zwrócił błąd — nie ponawiamy w kółko
+
   function push(opts) {
     const silent = !!(opts && opts.silent);
     if (!url()) return Promise.reject(new Error('Najpierw wpisz adres Web App (URL) w Ustawieniach.'));
@@ -116,6 +118,7 @@
     saving = post({ action: 'save', secret: token(), device: deviceName(), data: payload() })
       .then(function (res) {
         if (!res || !res.ok) throw new Error((res && res.error) || 'Serwer odrzucił zapis.');
+        blockedToken = null;
         writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'push' });
         notifyLog('sync', silent ? 'Automatyczny zapis na serwerze' : 'Zapisano na serwerze',
           (res.entries || 0) + ' wpisów · ' + deviceName());
@@ -124,6 +127,7 @@
       })
       .catch(function (e) {
         const msg = (e && e.message) ? e.message : String(e);
+        if (/sekret/i.test(msg)) blockedToken = token();
         writeStatus({ lastError: msg });
         if (silent) notify('err', 'Błąd zapisu na serwerze', msg);
         else notifyLog('err', 'Błąd zapisu na serwerze', msg);
@@ -212,6 +216,8 @@
 
   function schedule() {
     if (suspended || !url() || !autoEnabled()) return;
+    // Serwer odrzucił ten sekret — czekamy, aż użytkownik zmieni go w Ustawieniach.
+    if (blockedToken !== null && blockedToken === token()) return;
     if (timer) root.clearTimeout(timer);
     timer = root.setTimeout(function () {
       timer = null;

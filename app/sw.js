@@ -1,27 +1,27 @@
 // ============================================================
 //  stol-kos — Service Worker (offline-first)
 // ============================================================
-const CACHE = 'stol-kos-v17';
+const CACHE = 'stol-kos-v18';
 const ASSETS = [
   './',
   './index.html',
-  './tailwind.css?v=36',
-  './css/app.css?v=36',
-  './lucide.js?v=36',
+  './tailwind.css?v=37',
+  './css/app.css?v=37',
+  './lucide.js?v=37',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './js/compute.js?v=36',
-  './js/store.js?v=36',
-  './js/google.js?v=36',
-  './js/sync.js?v=36',
-  './js/ui.js?v=36',
-  './js/notify.js?v=36',
-  './js/views.js?v=36',
-  './js/actions.js?v=36',
-  './js/main.js?v=36',
+  './js/compute.js?v=37',
+  './js/store.js?v=37',
+  './js/google.js?v=37',
+  './js/sync.js?v=37',
+  './js/ui.js?v=37',
+  './js/notify.js?v=37',
+  './js/views.js?v=37',
+  './js/actions.js?v=37',
+  './js/main.js?v=37',
 ];
 
 self.addEventListener('install', (e) => {
