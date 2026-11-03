@@ -337,33 +337,169 @@
 
   function quoteSheet(title) { return "'" + String(title).replace(/'/g, "''") + "'"; }
 
+  /** 0 -> A, 2 -> C, 25 -> Z, 26 -> AA. */
+  function columnLetter(index) {
+    let n = Number(index) + 1;
+    if (!(n > 0)) return 'A';
+    let s = '';
+    while (n > 0) {
+      const m = (n - 1) % 26;
+      s = String.fromCharCode(65 + m) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+
+  /** Czyta wartości zakładki (do wykrycia rzeczywistego układu dni i formuł). */
+  function readValues(id, range) {
+    return api(SHEETS_BASE + '/' + id + '/values/' + encodeURIComponent(range) +
+      '?majorDimension=ROWS&valueRenderOption=FORMULA')
+      .then(function (res) { return (res && res.values) || []; });
+  }
+
+  /** Data z numeru seryjnego Google Sheets (epoka 1899-12-30). */
+  function dayFromSerial(serial, monthKey) {
+    const ms = Math.round((serial - 25569) * 86400000);
+    if (!Number.isFinite(ms)) return null;
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return null;
+    return dayFromParts(d.getUTCMonth() + 1, d.getUTCDate(), monthKey);
+  }
+
   /** Formuła „ilość godz" dla wiersza dnia — liczy arkusz, nie aplikacja. */
-  function hoursFormula(row) {
+  function hoursFormula(row, startCol, endCol) {
     // (do - od + (do < od)) * 24 — obsługuje też zmianę przez północ;
     // bez argumentów funkcji, więc działa w każdym locale arkusza.
-    return '=(D' + row + '-C' + row + '+(D' + row + '<C' + row + '))*24';
+    const a = columnLetter(startCol == null ? 2 : startCol) + row;
+    const b = columnLetter(endCol == null ? 3 : endCol) + row;
+    return '=(' + b + '-' + a + '+(' + b + '<' + a + '))*24';
+  }
+
+  /** Tekst nagłówka bez wielkości liter i polskich znaków. */
+  function headerKey(value) {
+    return String(value == null ? '' : value).toLowerCase()
+      .replace(/ł/g, 'l')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  function dayFromParts(month, day, monthKey) {
+    if (!(day >= 1 && day <= 31) || !(month >= 1 && month <= 12)) return null;
+    if (monthKey && month !== Number(String(monthKey).slice(5, 7))) return null;
+    return day;
+  }
+
+  /** Numer dnia z komórki A: 5, "5", "2026-11-05", "05.11.2026", "5.11". */
+  function dayNumber(value, monthKey) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const n = Math.floor(value);
+      if (n >= 1 && n <= 31) return n;
+      if (n > 31 && n < 100000) return dayFromSerial(n, monthKey);
+      return null;
+    }
+    const s = String(value == null ? '' : value).trim();
+    if (!s) return null;
+    if (/^\d{1,2}$/.test(s)) {
+      const n = Number(s);
+      return n >= 1 && n <= 31 ? n : null;
+    }
+    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/.exec(s);
+    if (m) return dayFromParts(Number(m[2]), Number(m[3]), monthKey);
+    m = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})(?:\s.*)?$/.exec(s);
+    if (m) return dayFromParts(Number(m[2]), Number(m[1]), monthKey);
+    m = /^(\d{1,2})[.\/-](\d{1,2})$/.exec(s);
+    if (m) return dayFromParts(Number(m[2]), Number(m[1]), monthKey);
+    return null;
+  }
+
+  /**
+   * Wykrywa, w których wierszach arkusza są dni 1–31.
+   * Najpierw szuka nagłówka „od / do" (także gdy ktoś przesunął tabelę),
+   * potem dopasowuje numery/daty z kolumny A. Gdy się nie uda — standardowy
+   * układ: nagłówek w wierszu 4, dni 1–31 w wierszach 5–35.
+   */
+  function detectLayout(values, monthKey) {
+    const rows = values || [];
+    let header = -1;
+    let startCol = 2, endCol = 3, hoursCol = 4;
+    for (let r = 0; r < Math.min(rows.length, 20); r++) {
+      const cells = (rows[r] || []).map(headerKey);
+      const iOd = cells.indexOf('od');
+      const iDo = cells.indexOf('do');
+      const iDay = cells.findIndex(function (c) { return c === 'dzien' || c === 'data' || c === 'date'; });
+      if (iDay >= 0 && header < 0) header = r;
+      if (iOd >= 0 && iDo >= 0) {
+        header = r;
+        startCol = iOd;
+        endCol = iDo;
+        const iHours = cells.findIndex(function (c) { return /^ilosc/.test(c); });
+        if (iHours >= 0) hoursCol = iHours;
+        break;
+      }
+    }
+    if (header < 0) header = 3;
+
+    const dayRows = {};
+    for (let r = header + 1; r < Math.min(rows.length, header + 63); r++) {
+      const d = dayNumber((rows[r] || [])[0], monthKey);
+      if (d && dayRows[d] == null) dayRows[d] = r + 1;
+    }
+    // Brakujące dni (pusta zakładka albo nietypowy układ) uzupełniamy
+    // kolejnymi wierszami poniżej nagłówka — bez nadpisywania innych dni.
+    const used = {};
+    Object.keys(dayRows).forEach(function (d) { used[dayRows[d]] = true; });
+    for (let d = 1; d <= 31; d++) {
+      if (dayRows[d] != null) continue;
+      const r = header + 1 + d;
+      if (!used[r]) { dayRows[d] = r; used[r] = true; }
+    }
+    return { headerRow: header + 1, startCol: startCol, endCol: endCol, hoursCol: hoursCol, dayRows: dayRows };
+  }
+
+  function isBlankSheet(values) {
+    return !(values || []).some(function (row) {
+      return (row || []).some(function (cell) { return String(cell == null ? '' : cell).trim() !== ''; });
+    });
+  }
+
+  /** Godziny „od" i „do" pogrupowane po dniu miesiąca (jeden wiersz = jeden dzień). */
+  function dayTimes(monthKey) {
+    const st = S.get();
+    const out = {};
+    (st.entries || []).forEach(function (e) {
+      const raw = String(e.date || '');
+      // Daty ISO muszą zgadzać się z miesiącem (rok ma znaczenie tylko tutaj).
+      const iso = /^(\d{4})-(\d{1,2})/.exec(raw);
+      if (iso && (iso[1] + '-' + String(Number(iso[2])).padStart(2, '0')) !== monthKey) return;
+      const d = dayNumber(raw, monthKey);
+      if (!d) return;
+      const t = out[d] || (out[d] = { startMin: null, endMin: null });
+      const s = C.toMin(e.start);
+      const en = C.toMin(e.end);
+      if (s != null && (t.startMin == null || s < t.startMin)) t.startMin = s;
+      if (en != null && (t.endMin == null || en > t.endMin)) t.endMin = en;
+    });
+    const res = {};
+    Object.keys(out).forEach(function (d) {
+      res[d] = {
+        start: out[d].startMin == null ? '' : C.fromMin(out[d].startMin),
+        end: out[d].endMin == null ? '' : C.fromMin(out[d].endMin),
+      };
+    });
+    return res;
   }
 
   /** Wiersze dni z wpisami: dla każdego dnia tylko „od" i „do". */
   function dayTimeRows(monthKey) {
-    const st = S.get();
-    const out = [];
-    for (let d = 1; d <= 31; d++) {
-      const key = monthKey + '-' + String(d).padStart(2, '0');
-      const items = (st.entries || []).filter(function (e) { return e.date === key; });
-      if (!items.length) continue;
-      let start = null, end = null;
-      items.forEach(function (e) {
-        if (e.start && (start === null || e.start < start)) start = e.start;
-        if (e.end && (end === null || e.end > end)) end = e.end;
-      });
-      out.push({ row: 4 + d, start: start, end: end });
-    }
-    return out;
+    const times = dayTimes(monthKey);
+    return Object.keys(times).map(Number).sort(function (a, b) { return a - b; })
+      .map(function (d) { return { row: 4 + d, day: d, start: times[d].start, end: times[d].end }; });
   }
 
   /**
-   * Wysyła do zakładki miesiąca TYLKO godziny „od" i „do" dla dni z wpisami.
+   * Wysyła do zakładki miesiąca TYLKO godziny „od" i „do".
+   * Każdy dzień trafia do wiersza odpowiadającego jego dacie — dni bez wpisów
+   * są czyszczone, więc stare godziny nie zostają na innych datach.
    * Ilość godzin i sumy liczą formuły arkusza — aplikacja ich nie nadpisuje.
    * extraHours — godziny dopisane w oknie rozliczenia (tylko do podsumowania w aplikacji).
    */
@@ -375,37 +511,70 @@
     const cfg = gcfg();
     const forced = String(cfg.sheetName || '').trim();
     const target = forced || stats.label; // domyślnie polska nazwa miesiąca (jak w Skoroszycie)
+    let exists = false;
 
     return sheetTitles(id).then(function (info) {
-      const exists = info.sheets.indexOf(target) >= 0;
+      exists = info.sheets.indexOf(target) >= 0;
       const q = quoteSheet(target);
-      const create = exists ? Promise.resolve() : addSheet(id, target).then(function () {
-        return batchUpdateValues(id, [{ range: q + '!A1:E40', values: sheetTemplate(stats) }]);
-      });
-      return create.then(function () {
-        const data = [];
-        // 1) TYLKO „od” i „do” dla dni z wpisami (kolumny C i D).
-        dayTimeRows(monthKey).forEach(function (d) {
-          data.push({ range: q + '!C' + d.row + ':D' + d.row, values: [[d.start || '', d.end || '']] });
+      if (!exists) {
+        // Nowa zakładka: najpierw pełny szablon (nagłówki, dni, formuły sum).
+        const tpl = sheetTemplate(stats);
+        return addSheet(id, target)
+          .then(function () {
+            return batchUpdateValues(id, [{ range: q + '!A1:E40', values: tpl }]);
+          })
+          .then(function () { return tpl; });
+      }
+      // Istniejąca zakładka: czytamy układ, żeby trafić w właściwe wiersze dat.
+      return readValues(id, q + '!A1:J60');
+    }).then(function (sheetValues) {
+      const q = quoteSheet(target);
+      if (exists && isBlankSheet(sheetValues)) {
+        // Pusta zakładka o właściwej nazwie — wypełniamy szablonem.
+        const tpl = sheetTemplate(stats);
+        return batchUpdateValues(id, [{ range: q + '!A1:E40', values: tpl }])
+          .then(function () { return tpl; });
+      }
+      return sheetValues || [];
+    }).then(function (sheetValues) {
+      const q = quoteSheet(target);
+      const layout = detectLayout(sheetValues, monthKey);
+      const times = dayTimes(monthKey);
+      const data = [];
+      for (let day = 1; day <= 31; day++) {
+        const row = layout.dayRows[day];
+        if (!row) continue;
+        const t = times[day] || { start: '', end: '' };
+        // Zawsze zapisujemy obie komórki — także puste, żeby usunąć stare godziny.
+        data.push({
+          range: q + '!' + columnLetter(layout.startCol) + row,
+          values: [[t.start || '']],
         });
-        // 2) Formuły automatyczne: ilość godzin z „od/do” oraz sumy.
-        for (let day = 1; day <= 31; day++) {
-          const r = 4 + day;
-          data.push({ range: q + '!E' + r, values: [[hoursFormula(r)]] });
+        data.push({
+          range: q + '!' + columnLetter(layout.endCol) + row,
+          values: [[t.end || '']],
+        });
+        // Formułę „ilość godz" uzupełniamy tylko w pustej komórce;
+        // istniejących formuł użytkownika nie nadpisujemy.
+        const current = String((sheetValues[row - 1] || [])[layout.hoursCol] == null
+          ? '' : (sheetValues[row - 1] || [])[layout.hoursCol]).trim();
+        // Formuła zostaje; pustą lub starą wartość liczbową zastępujemy formułą.
+        if (!exists || !current || current.charAt(0) !== '=') {
+          data.push({
+            range: q + '!' + columnLetter(layout.hoursCol) + row,
+            values: [[hoursFormula(row, layout.startCol, layout.endCol)]],
+          });
         }
-        data.push({ range: q + '!D3', values: [['=D39']] });
-        data.push({ range: q + '!E36', values: [['=SUM(E5:E35)']] });
-        data.push({ range: q + '!D39', values: [['=SUM(E5:E35)']] });
-        return batchUpdateValues(id, data);
-      }).then(function () {
-        const url = 'https://docs.google.com/spreadsheets/d/' + id;
-        S.markMonthExported(monthKey, {
-          label: stats.label, hours: stats.hours, amount: stats.amount, url: url,
-          row: 39,
-        });
-        S.removeNotified(monthKey);
-        return { ok: true, created: !exists, title: target, stats: stats, url: url };
+      }
+      return batchUpdateValues(id, data);
+    }).then(function () {
+      const url = 'https://docs.google.com/spreadsheets/d/' + id;
+      S.markMonthExported(monthKey, {
+        label: stats.label, hours: stats.hours, amount: stats.amount, url: url,
+        row: 39,
       });
+      S.removeNotified(monthKey);
+      return { ok: true, created: !exists, title: target, stats: stats, url: url };
     });
   }
 
@@ -591,7 +760,8 @@
     // kalendarz
     pushEntry, removeEvent, autoPush, autoRemove,
     // skoroszyt
-    testSheet, exportMonth, sheetTitles, extractSpreadsheetId, dayTimeRows, hoursFormula,
+    testSheet, exportMonth, sheetTitles, extractSpreadsheetId,
+    dayTimeRows, dayTimes, hoursFormula, detectLayout, dayNumber,
     // przypomnienia
     dueMonths, notifyDue,
     // czyste helpery (testy)
