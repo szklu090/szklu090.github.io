@@ -37,6 +37,7 @@
       lastAt: s.lastAt || '',
       lastError: s.lastError || '',
       lastDir: s.lastDir || '',
+      pending: !!s.pending,
     };
   }
 
@@ -119,7 +120,7 @@
       .then(function (res) {
         if (!res || !res.ok) throw new Error((res && res.error) || 'Serwer odrzucił zapis.');
         blockedToken = null;
-        writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'push' });
+        writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'push', pending: false });
         notifyLog('sync', silent ? 'Automatyczny zapis na serwerze' : 'Zapisano na serwerze',
           (res.entries || 0) + ' wpisów · ' + deviceName());
         if (res && res.mailed) notifyLog('sync', 'Nowe urządzenie w bazie', 'Wysłano e-mail do właściciela bazy');
@@ -128,7 +129,9 @@
       .catch(function (e) {
         const msg = (e && e.message) ? e.message : String(e);
         if (/sekret/i.test(msg)) blockedToken = token();
-        writeStatus({ lastError: msg });
+        // Zapis nie doszedł — zapamiętaj, żeby nie nadpisać lokalnych zmian
+        // danymi z serwera przy najbliższym starcie.
+        writeStatus({ lastError: msg, pending: true });
         if (silent) notify('err', 'Błąd zapisu na serwerze', msg);
         else notifyLog('err', 'Błąd zapisu na serwerze', msg);
         throw e;
@@ -206,8 +209,70 @@
     } finally {
       suspended = false;
     }
-    writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'pull' });
+    writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'pull', pending: false });
     return S.get();
+  }
+
+  /** Czy dane z serwera zawierają cokolwiek wartościowego. */
+  function hasData(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (Array.isArray(data.entries) && data.entries.length > 0) return true;
+    if (Array.isArray(data.settlements) && data.settlements.length > 0) return true;
+    if (Array.isArray(data.templates) && data.templates.length > 0) return true;
+    if (Array.isArray(data.projects) && data.projects.length > 1) return true;
+    if (data.profile && data.profile.name) return true;
+    return false;
+  }
+
+  /**
+   * Start aplikacji: serwer jest źródłem prawdy.
+   * • są dane na serwerze → wczytaj je i zastąp lokalne,
+   * • serwer pusty → wyślij dane lokalne,
+   * • lokalne zmiany czekają na wysłanie (pending) → najpierw wyślij je.
+   */
+  let booting = null;
+  function bootstrap(opts) {
+    const silent = !(opts && opts.loud);
+    if (!url()) return Promise.resolve({ ok: false, error: 'Brak adresu bazy.' });
+    if (booting) return booting;
+    const finishPush = function (res) {
+      return { ok: true, loaded: false, pushed: true, entries: (res && res.entries) || 0 };
+    };
+    booting = Promise.resolve()
+      .then(function () {
+        // Nie wysłane wcześniej zmiany (offline) mają pierwszeństwo.
+        if (readStatus().pending) {
+          return push({ silent: silent }).then(finishPush, function (e) {
+            writeStatus({ lastError: e.message });
+            return { ok: false, error: e.message };
+          });
+        }
+        return pull().then(function (data) {
+          if (hasData(data)) {
+            applyRemote(data);
+            notifyLog('sync', 'Wczytano dane z serwera', ((data && data.entries) || []).length + ' wpisów');
+            return { ok: true, loaded: true, entries: ((data && data.entries) || []).length };
+          }
+          return push({ silent: silent }).then(finishPush, function (e) {
+            writeStatus({ lastError: e.message });
+            return { ok: false, error: e.message };
+          });
+        }, function (e) {
+          const msg = (e && e.message) || String(e);
+          if (/nie ma jeszcze danych/i.test(msg)) {
+            return push({ silent: silent }).then(finishPush, function (e2) {
+              writeStatus({ lastError: e2.message });
+              return { ok: false, error: e2.message };
+            });
+          }
+          writeStatus({ lastError: msg });
+          if (!silent) notifyLog('err', 'Błąd wczytywania z serwera', msg);
+          return { ok: false, error: msg };
+        });
+      });
+    const clear = function () { booting = null; };
+    booting.then(clear, clear);
+    return booting;
   }
 
   /* ---------------- automatyczny zapis ---------------- */
@@ -222,7 +287,7 @@
     timer = root.setTimeout(function () {
       timer = null;
       push({ silent: true }).catch(function () { /* błąd trafia do statusu i powiadomień */ });
-    }, 4000);
+    }, 2500);
   }
 
   function init() {
@@ -233,6 +298,7 @@
 
   SK.sync = {
     status: status, payload: payload, push: push, pull: pull, applyRemote: applyRemote,
+    bootstrap: bootstrap, hasData: hasData,
     schedule: schedule, init: init, url: url, deviceName: deviceName,
     suspend: function (v) { suspended = !!v; },
   };

@@ -52,7 +52,7 @@
       const a = doc.getElementById('storage-info');
       const b = doc.getElementById('storage-info2');
       if (a) a.textContent = label;
-      if (b) b.textContent = label + ' · localStorage';
+      if (b) b.textContent = label + ' · kopia offline';
     } catch (e) { /* ignore */ }
 
     const pwa = doc.getElementById('pwa-install');
@@ -384,15 +384,35 @@
     } catch (e) { /* ignore */ }
   }
 
+  /* Serwer jest źródłem prawdy: po odblokowaniu wczytaj stan z bazy
+     (albo wyślij lokalny, gdy baza jest jeszcze pusta). */
+  let bootstrapped = false;
+  function syncBootstrap(force) {
+    if (!SK.sync || !SK.sync.bootstrap) return;
+    if (SK.auth && SK.auth.locked && SK.auth.locked()) return;
+    if (bootstrapped && !force) return;
+    bootstrapped = true;
+    SK.sync.bootstrap({ loud: false }).then(function (r) {
+      updateChrome();
+      if (r && r.loaded) refresh();
+    });
+  }
+
   function init() {
     const st = S.load();
     U.applyTheme(st.profile.theme || 'dark');
     // Logowanie: ekran logowania / pierwsza konfiguracja konta.
-    try { if (SK.auth && SK.auth.init) SK.auth.init(); } catch (e) { /* ignore */ }
+    let authReady = null;
+    try { if (SK.auth && SK.auth.init) authReady = SK.auth.init(); } catch (e) { /* ignore */ }
     if (SK.auth && SK.auth.onChange) {
       SK.auth.onChange(function () {
         updateChrome();
-        if (!SK.auth.locked()) refresh();
+        if (!SK.auth.locked()) {
+          refresh();
+          syncBootstrap();
+        } else {
+          bootstrapped = false;
+        }
       });
     }
     const linkedUrl = applySyncFromUrl();
@@ -420,6 +440,13 @@
 
     // synchronizacja z serwerem (auto-zapis po zmianie)
     try { if (SK.sync && SK.sync.init) SK.sync.init(); } catch (e) { /* ignore */ }
+
+    // Serwer = źródło prawdy: po zalogowaniu wczytaj dane z bazy.
+    if (authReady && authReady.then) {
+      authReady.then(function () { syncBootstrap(); }, function () { /* ignore */ });
+    } else {
+      syncBootstrap();
+    }
 
     // przypomnienie o zamkniętym miesiącu (opcjonalne powiadomienie)
     try { if (SK.google && SK.google.notifyDue) SK.google.notifyDue(); } catch (e) { /* ignore */ }

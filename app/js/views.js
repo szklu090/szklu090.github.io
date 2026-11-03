@@ -986,13 +986,14 @@
       '<li>„Wykonaj jako”: <b>Ja</b>; „Kto ma dostęp”: <b>Każdy</b> → wdróż i skopiuj adres <span class="kbd">/exec</span>.</li>' +
       '<li>Adres bazy jest już wpisany — wpisz tylko sekret (jeśli go ustawiłeś), zapisz i kliknij <b>Test</b>.</li>' +
       '</ol>' +
-      '<p class="hint">Dane trafiają do arkusza <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie. Zdarzenia synchronizacji znajdziesz pod dzwonkiem 🔔 w nagłówku.</p>' +
+      '<p class="hint">Dane są zapisywane na serwerze w arkuszu <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie i wczytuje przy starcie, więc to samo widzisz na każdym urządzeniu. Zdarzenia synchronizacji znajdziesz pod dzwonkiem 🔔 w nagłówku.</p>' +
       '</details>';
 
     return card('Baza na serwerze (Google)', 'cloud-upload', '<form data-form="sync" class="stack">' +
       '<div class="row between"><span class="muted">Status</span>' +
       (s.ready ? '<span class="badge ok">' + icon('check') + ' Skonfigurowano</span>' : '<span class="badge warn">' + icon('x') + ' Nie skonfigurowano</span>') + '</div>' +
       (s.ready && !c.token ? '<div class="hint" style="color:var(--warn,#f59e0b)">' + icon('key-round') + ' Adres bazy jest już wpisany. Wpisz sekret, jeśli ustawiłeś go w Apps Script.</div>' : '') +
+      (s.pending ? '<div class="hint" style="color:var(--warn,#f59e0b)">' + icon('cloud-off') + ' Są zmiany, które nie dotarły na serwer — kliknij „Wyślij teraz”.</div>' : '') +
       '<div class="field full"><label>Masz link do konfiguracji? Wklej go tutaj</label><input class="input" name="syncLink" placeholder="https://.../?sync=...&secret=..." /></div>' +
       '<div class="field full"><label>Adres Web App (URL)</label><input class="input" name="syncUrl" value="' + esc(c.url || '') + '" placeholder="https://script.google.com/macros/s/.../exec" /></div>' +
       '<div class="field full"><label>Sekret (opcjonalnie)</label><input class="input" name="syncToken" value="' + esc(c.token || '') + '" placeholder="np. moj-sekret-123" /></div>' +
@@ -1005,6 +1006,7 @@
       '<button type="button" class="btn btn-sm" data-action="sync:link"' + (s.ready ? '' : ' disabled') + '>' + icon('link') + ' Kopiuj link do konfiguracji</button>' +
       '</div>' +
       '<div class="hint">Otwórz ten link na innym urządzeniu (telefon, drugi komputer) — baza ustawi się sama, bez wpisywania adresu i sekretu.</div>' +
+      '<div class="hint">Wszystkie dane trzymamy na serwerze. Na tym urządzeniu jest tylko kopia offline, żeby aplikacja działała bez internetu.</div>' +
       '<div class="hint">Ostatni zapis: <b>' + esc(last) + '</b>' + (s.lastError ? ' · <span style="color:var(--danger,#ef4444)">błąd: ' + esc(s.lastError) + '</span>' : '') + '</div>' +
       instr +
       '</form>');
@@ -1139,8 +1141,8 @@
       '</div>');
 
     const about = card('O aplikacji', 'info', '<div class="stack" style="font-size:.86rem">' +
-      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.7</b></div>' +
-      '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">localStorage</b></div>' +
+      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.8</b></div>' +
+      '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">serwer + kopia offline</b></div>' +
       '<div class="row between"><span class="muted">Tryb</span><b>offline-first (PWA)</b></div>' +
       '<div class="hint">Skróty: <span class="kbd">Ctrl K</span> paleta · <span class="kbd">N</span> nowy wpis · <span class="kbd">Esc</span> zamknij.</div>' +
       '</div>');

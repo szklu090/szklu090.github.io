@@ -701,7 +701,12 @@
     if (pasted && SK.notify) {
       try { SK.notify.log('link', 'Zastosowano link konfiguracyjny', 'Podłączono do bazy'); } catch (e) { /* ignore */ }
     }
-    refresh();
+    // Serwer = źródło prawdy: po zapisaniu ustawień wczytaj dane (albo wyślij lokalne).
+    if (SK.sync && SK.sync.bootstrap) {
+      SK.sync.bootstrap({ loud: true }).then(function () { refresh(); });
+    } else {
+      refresh();
+    }
   }
 
   /* ============================================================
@@ -936,7 +941,7 @@
       const u = String(c.url || '').trim();
       if (!u) { U.toast('Najpierw wpisz adres Web App i zapisz', 'err'); return; }
       const q = new root.URLSearchParams();
-      q.set('v', '41');
+      q.set('v', '42');
       q.set('sync', u);
       if (c.token) q.set('secret', c.token);
       if (c.auto === false) q.set('auto', '0');

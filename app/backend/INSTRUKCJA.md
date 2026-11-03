@@ -54,9 +54,16 @@ Od wersji 3.7 konta są wspólne dla wszystkich urządzeń i trzymane w bazie:
 
 ## Jak to działa
 
-- Po każdej zmianie aplikacja (po ~4 s) wysyła cały stan jako JSON.
+- **Wszystkie dane są trzymane na serwerze** — wpisy, projekty, ustawienia,
+  szablony, rozliczenia i znaczniki wysyłki do Skoroszytu.
+- Po każdej zmianie aplikacja (po ~2,5 s) wysyła cały stan jako JSON.
+- Przy starcie (po zalogowaniu) aplikacja wczytuje ostatni stan z serwera,
+  więc każde urządzenie widzi te same dane.
 - Każdy zapis to nowy wiersz w arkuszu — starsze wersje zostają jako historia.
-- **Pobierz z serwera** wczytuje ostatni zapis na innym urządzeniu.
+- Przeglądarka trzyma tylko **kopię offline**; gdy zapis się nie powiedzie,
+  zmiany czekają i zostaną wysłane przy następnym starcie (nie zostaną
+  nadpisane danymi z serwera).
+- **Pobierz z serwera** wczytuje ostatni zapis ręcznie.
 - Gdy zmienisz kod skryptu, zrób **Wdróż → Zarządzaj wdrożeniami → Edytuj → Nowa wersja**.
 
 ## Powiadomienia
