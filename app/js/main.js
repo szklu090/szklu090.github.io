@@ -311,21 +311,44 @@
   /* ============================================================
      Start
      ============================================================ */
+  function readSyncParams() {
+    const out = { url: '', token: null, auto: true };
+    function take(qs) {
+      if (!qs) return;
+      try {
+        const q = new root.URLSearchParams(qs);
+        const u = q.get('sync') || q.get('syncUrl');
+        if (!u) return;
+        out.url = String(u).trim();
+        out.token = q.get('secret');
+        out.auto = q.get('auto') !== '0';
+      } catch (e) { /* ignore */ }
+    }
+    take(String(root.location.search || '').replace(/^\?/, ''));
+    const hash = String(root.location.hash || '');
+    if (hash) {
+      const i = hash.indexOf('?');
+      take(i >= 0 ? hash.slice(i + 1) : (hash.indexOf('sync=') >= 0 ? hash.slice(1) : ''));
+    }
+    return out.url ? out : null;
+  }
+
   function applySyncFromUrl() {
     try {
-      const q = new root.URLSearchParams(root.location.search || '');
-      const u = q.get('sync') || q.get('syncUrl');
-      if (!u) return null;
+      const p = readSyncParams();
+      if (!p) return null;
       const st = S.get();
       st.settings.sync = st.settings.sync || {};
-      st.settings.sync.url = String(u).trim();
-      if (q.get('secret') != null) st.settings.sync.token = q.get('secret');
-      st.settings.sync.auto = q.get('auto') !== '0';
+      st.settings.sync.url = p.url;
+      if (p.token != null) st.settings.sync.token = p.token;
+      st.settings.sync.auto = p.auto;
       S.save();
       try {
-        root.history.replaceState(null, '', root.location.pathname + (root.location.hash || ''));
+        const hadHashParams = /(^#|[?&#])(sync|secret|auto)=/.test(root.location.hash || '');
+        const cleanHash = hadHashParams ? '' : (root.location.hash || '');
+        root.history.replaceState(null, '', root.location.pathname + cleanHash);
       } catch (e) { /* ignore */ }
-      return String(u).trim();
+      return p.url;
     } catch (e) { return null; }
   }
 
@@ -367,6 +390,12 @@
     // komunikat, gdy baza została ustawiona z linku (?sync=...)
     if (linkedUrl) announceSyncLink(linkedUrl);
 
+    // ponowne sprawdzenie linku po powrocie z pamięci podręcznej przeglądarki
+    root.addEventListener('pageshow', function () {
+      const again = applySyncFromUrl();
+      if (again) announceSyncLink(again);
+    });
+
     // synchronizacja z serwerem (auto-zapis po zmianie)
     try { if (SK.sync && SK.sync.init) SK.sync.init(); } catch (e) { /* ignore */ }
 
@@ -376,10 +405,19 @@
     // żywy zegar stopera
     setInterval(tick, 1000);
 
-    // service worker (offline)
+    // service worker (offline) + automatyczne odświeżenie po nowej wersji
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloading) return;
+        reloading = true;
+        try { location.reload(); } catch (e) { /* ignore */ }
+      });
       root.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').catch(function () { /* ignore */ });
+        try {
+          navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () { /* ignore */ });
+        } catch (e) { /* ignore */ }
       });
     }
 

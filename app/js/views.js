@@ -992,6 +992,7 @@
     return card('Baza na serwerze (Google)', 'cloud-upload', '<form data-form="sync" class="stack">' +
       '<div class="row between"><span class="muted">Status</span>' +
       (s.ready ? '<span class="badge ok">' + icon('check') + ' Skonfigurowano</span>' : '<span class="badge warn">' + icon('x') + ' Nie skonfigurowano</span>') + '</div>' +
+      '<div class="field full"><label>Masz link do konfiguracji? Wklej go tutaj</label><input class="input" name="syncLink" placeholder="https://.../?sync=...&secret=..." /></div>' +
       '<div class="field full"><label>Adres Web App (URL)</label><input class="input" name="syncUrl" value="' + esc(c.url || '') + '" placeholder="https://script.google.com/macros/s/.../exec" /></div>' +
       '<div class="field full"><label>Sekret (opcjonalnie)</label><input class="input" name="syncToken" value="' + esc(c.token || '') + '" placeholder="np. moj-sekret-123" /></div>' +
       '<div class="row between"><span>Wysyłaj automatycznie po zmianie</span><label class="switch"><input type="checkbox" name="syncAuto"' + (c.auto !== false ? ' checked' : '') + ' /><span class="sl"></span></label></div>' +
@@ -1078,7 +1079,7 @@
       '</div>');
 
     const about = card('O aplikacji', 'info', '<div class="stack" style="font-size:.86rem">' +
-      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.4</b></div>' +
+      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.5</b></div>' +
       '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">localStorage</b></div>' +
       '<div class="row between"><span class="muted">Tryb</span><b>offline-first (PWA)</b></div>' +
       '<div class="hint">Skróty: <span class="kbd">Ctrl K</span> paleta · <span class="kbd">N</span> nowy wpis · <span class="kbd">Esc</span> zamknij.</div>' +

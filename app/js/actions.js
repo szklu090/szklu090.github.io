@@ -522,15 +522,41 @@
     refresh();
   }
 
+  /** Wyciąga adres i sekret z pełnego linku konfiguracyjnego (?sync=...&secret=...). */
+  function parseSyncLink(text) {
+    const s = String(text || '').trim();
+    if (!s) return null;
+    const qi = s.indexOf('?');
+    const hi = s.indexOf('sync=');
+    if (qi < 0 && hi < 0) return null;
+    try {
+      const qs = s.slice(qi >= 0 ? qi + 1 : hi);
+      const q = new root.URLSearchParams(qs);
+      const u = q.get('sync') || q.get('syncUrl');
+      if (!u) return null;
+      return { url: String(u).trim(), secret: q.get('secret'), auto: q.get('auto') !== '0' };
+    } catch (e) { return null; }
+  }
+
   function saveSync(form) {
     const f = U.formToObject(form);
     const st = S.get();
     st.settings.sync = st.settings.sync || {};
-    st.settings.sync.url = String(f.syncUrl || '').trim();
-    st.settings.sync.token = String(f.syncToken || '');
-    st.settings.sync.auto = !!(form.elements.syncAuto && form.elements.syncAuto.checked);
+    const pasted = parseSyncLink(f.syncLink);
+    if (pasted) {
+      st.settings.sync.url = pasted.url;
+      if (pasted.secret != null) st.settings.sync.token = pasted.secret;
+      st.settings.sync.auto = pasted.auto && !!(form.elements.syncAuto && form.elements.syncAuto.checked);
+    } else {
+      st.settings.sync.url = String(f.syncUrl || '').trim();
+      st.settings.sync.token = String(f.syncToken || '');
+      st.settings.sync.auto = !!(form.elements.syncAuto && form.elements.syncAuto.checked);
+    }
     S.save();
-    U.toast('Ustawienia bazy zapisane', 'ok');
+    U.toast(pasted ? 'Zastosowano link konfiguracyjny' : 'Ustawienia bazy zapisane', 'ok');
+    if (pasted && SK.notify) {
+      try { SK.notify.log('link', 'Zastosowano link konfiguracyjny', 'Podłączono do bazy'); } catch (e) { /* ignore */ }
+    }
     refresh();
   }
 

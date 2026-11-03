@@ -1,7 +1,7 @@
 // ============================================================
 //  stol-kos — Service Worker (offline-first)
 // ============================================================
-const CACHE = 'stol-kos-v13';
+const CACHE = 'stol-kos-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -42,6 +42,20 @@ self.addEventListener('fetch', (e) => {
 
   // Only handle same-origin; let CDN fallbacks pass through to network.
   if (!req.url.startsWith(self.location.origin)) return;
+
+  // Nawigacja: najpierw sieć (nowa wersja od razu), offline → cache.
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(req, clone)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
 
   // Cache-first for local assets, network fallback.
   e.respondWith(
