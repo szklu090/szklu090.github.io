@@ -545,6 +545,10 @@
         const row = layout.dayRows[day];
         if (!row) continue;
         const t = times[day] || { start: '', end: '' };
+        // Pustą kolumnę dnia uzupełniamy numerem — istniejących dat nie ruszamy.
+        const currentDay = String((sheetValues[row - 1] || [])[0] == null
+          ? '' : (sheetValues[row - 1] || [])[0]).trim();
+        if (!currentDay) data.push({ range: q + '!A' + row, values: [[day]] });
         // Zawsze zapisujemy obie komórki — także puste, żeby usunąć stare godziny.
         data.push({
           range: q + '!' + columnLetter(layout.startCol) + row,
