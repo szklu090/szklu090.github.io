@@ -99,19 +99,34 @@
       });
   }
 
+  /* ---------------- powiadomienia ---------------- */
+  function notify(type, title, detail) {
+    try { if (SK.notify && SK.notify.add) SK.notify.add(type, title, detail, {}); } catch (e) { /* ignore */ }
+  }
+  function notifyLog(type, title, detail) {
+    try { if (SK.notify && SK.notify.log) SK.notify.log(type, title, detail); } catch (e) { /* ignore */ }
+  }
+
   /* ---------------- wysyłka ---------------- */
   let saving = null;
-  function push() {
+  function push(opts) {
+    const silent = !!(opts && opts.silent);
     if (!url()) return Promise.reject(new Error('Najpierw wpisz adres Web App (URL) w Ustawieniach.'));
     if (saving) return saving;
     saving = post({ action: 'save', secret: token(), device: deviceName(), data: payload() })
       .then(function (res) {
         if (!res || !res.ok) throw new Error((res && res.error) || 'Serwer odrzucił zapis.');
         writeStatus({ lastAt: new Date().toISOString(), lastError: '', lastDir: 'push' });
+        notifyLog('sync', silent ? 'Automatyczny zapis na serwerze' : 'Zapisano na serwerze',
+          (res.entries || 0) + ' wpisów · ' + deviceName());
+        if (res && res.mailed) notifyLog('sync', 'Nowe urządzenie w bazie', 'Wysłano e-mail do właściciela bazy');
         return res;
       })
       .catch(function (e) {
-        writeStatus({ lastError: (e && e.message) ? e.message : String(e) });
+        const msg = (e && e.message) ? e.message : String(e);
+        writeStatus({ lastError: msg });
+        if (silent) notify('err', 'Błąd zapisu na serwerze', msg);
+        else notifyLog('err', 'Błąd zapisu na serwerze', msg);
         throw e;
       });
     const clear = function () { saving = null; };
@@ -141,7 +156,11 @@
         try { return JSON.parse(text); }
         catch (e) { return jsonpLoad(); }
       })
-      .then(finish);
+      .then(finish)
+      .then(function (data) {
+        notifyLog('sync', 'Pobrano dane z serwera', (data.entries || 0) + ' wpisów');
+        return data;
+      });
   }
 
   /** Odczyt przez JSONP — działa nawet gdy przeglądarka blokuje CORS. */
@@ -196,7 +215,7 @@
     if (timer) root.clearTimeout(timer);
     timer = root.setTimeout(function () {
       timer = null;
-      push().catch(function () { /* błąd trafia do statusu */ });
+      push({ silent: true }).catch(function () { /* błąd trafia do statusu i powiadomień */ });
     }, 4000);
   }
 

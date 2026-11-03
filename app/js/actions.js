@@ -779,6 +779,27 @@
       } catch (e) { fail(); }
     },
 
+    // Powiadomienia (dzwonek)
+    'notify:open': function () { if (SK.notify) SK.notify.open(); },
+    'notify:close': function () { if (SK.notify) SK.notify.close(); },
+    'notify:clear': function () {
+      if (!SK.notify) return;
+      SK.notify.clear();
+      U.toast('Wyczyszczono powiadomienia', 'ok');
+    },
+    'notify:enable': function () {
+      if (!SK.notify) return;
+      SK.notify.requestPermission().then(function (ok) {
+        if (ok) {
+          U.toast('Powiadomienia systemowe włączone', 'ok');
+          SK.notify.system('STOL-KOS', 'Powiadomienia systemowe są włączone', true);
+        } else {
+          U.toast('Przeglądarka nie zgodziła się na powiadomienia', 'err');
+        }
+        SK.notify.render();
+      });
+    },
+
     'data:export-json': exportJson,
     'data:import-json': importJson,
     'data:import-csv': importCsv,

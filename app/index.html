@@ -86,6 +86,7 @@
         <div class="brand-logo" style="width:34px;height:34px;border-radius:11px"><i data-lucide="clock-3"></i></div>
         <div class="brand-title">STOL-KOS</div>
         <div class="topbar-actions">
+          <button class="btn btn-icon btn-ghost" id="m-notify" title="Powiadomienia" aria-label="Powiadomienia"><i data-lucide="bell"></i><span class="notify-badge" id="m-notify-badge" hidden></span></button>
           <button class="btn btn-icon btn-ghost" id="m-theme-toggle" title="Motyw"><i data-lucide="moon"></i></button>
           <button class="btn btn-icon btn-ghost" id="m-search" title="Szukaj"><i data-lucide="search"></i></button>
         </div>
@@ -97,6 +98,7 @@
           <div class="sub" id="page-sub">Przegląd Twojej pracy</div>
         </div>
         <div class="topbar-actions">
+          <button class="btn btn-icon btn-ghost" id="notify-btn" title="Powiadomienia" aria-label="Powiadomienia"><i data-lucide="bell"></i><span class="notify-badge" id="notify-badge" hidden></span></button>
           <button class="btn btn-ghost btn-sm" id="palette-btn" title="Szybkie polecenia (Ctrl+K)">
             <i data-lucide="search"></i><span class="nowrap">Szukaj</span><span class="kbd">Ctrl K</span>
           </button>
@@ -130,6 +132,9 @@
   <!-- roots -->
   <div class="toast-root" id="toast-root" aria-live="polite"></div>
   <div class="modal-root" id="modal-root"></div>
+  <div class="notify-root" id="notify-root">
+    <div class="notify-panel" id="notify-panel"></div>
+  </div>
   <div class="palette-root" id="palette-root">
     <div class="palette">
       <input id="palette-input" type="text" placeholder="Szukaj strony, wpisu lub akcji…" autocomplete="off" />
@@ -143,6 +148,7 @@
   <script src="js/google.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/notify.js"></script>
   <script src="js/views.js"></script>
   <script src="js/actions.js"></script>
   <script src="js/main.js"></script>

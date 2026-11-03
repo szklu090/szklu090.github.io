@@ -266,7 +266,7 @@
         else if (e.key === 'Enter') { e.preventDefault(); choosePalette(); }
         return;
       }
-      if (e.key === 'Escape') { U.closeModal(); return; }
+      if (e.key === 'Escape') { try { if (SK.notify) SK.notify.close(); } catch (err) { /* ignore */ } U.closeModal(); return; }
       if (!typing && (e.key === 'n' || e.key === 'N')) { e.preventDefault(); go('add'); }
       if (!typing && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); go('calendar'); }
       if (!typing && e.key === '/') { e.preventDefault(); openPalette(); }
@@ -315,7 +315,7 @@
     try {
       const q = new root.URLSearchParams(root.location.search || '');
       const u = q.get('sync') || q.get('syncUrl');
-      if (!u) return false;
+      if (!u) return null;
       const st = S.get();
       st.settings.sync = st.settings.sync || {};
       st.settings.sync.url = String(u).trim();
@@ -325,14 +325,32 @@
       try {
         root.history.replaceState(null, '', root.location.pathname + (root.location.hash || ''));
       } catch (e) { /* ignore */ }
-      return true;
-    } catch (e) { return false; }
+      return String(u).trim();
+    } catch (e) { return null; }
+  }
+
+  /** Komunikat + powiadomienie po zastosowaniu konfiguracji z linku. */
+  function announceSyncLink(linkedUrl) {
+    let host = linkedUrl;
+    try { host = new root.URL(linkedUrl).host || linkedUrl; } catch (e) { /* ignore */ }
+    try {
+      if (SK.notify && SK.notify.add) {
+        SK.notify.add('ok', 'Zastosowano konfigurację bazy', 'Podłączono do: ' + host, { system: true, force: true, sound: true });
+        if (SK.notify.permission && SK.notify.permission() === 'default') {
+          SK.notify.requestPermission().then(function (ok) {
+            if (ok && SK.notify.system) SK.notify.system('STOL-KOS', 'Powiadomienia systemowe włączone', true);
+          });
+        }
+      } else {
+        U.toast('Zastosowano konfigurację bazy · ' + host, 'ok');
+      }
+    } catch (e) { /* ignore */ }
   }
 
   function init() {
     const st = S.load();
     U.applyTheme(st.profile.theme || 'dark');
-    applySyncFromUrl();
+    const linkedUrl = applySyncFromUrl();
 
     const h = (root.location.hash || '').replace('#', '');
     current = V.meta[h] ? h : 'dashboard';
@@ -342,6 +360,12 @@
 
     wire();
     refresh();
+
+    // powiadomienia (dzwonek, dziennik zdarzeń)
+    try { if (SK.notify && SK.notify.init) SK.notify.init(); } catch (e) { /* ignore */ }
+
+    // komunikat, gdy baza została ustawiona z linku (?sync=...)
+    if (linkedUrl) announceSyncLink(linkedUrl);
 
     // synchronizacja z serwerem (auto-zapis po zmianie)
     try { if (SK.sync && SK.sync.init) SK.sync.init(); } catch (e) { /* ignore */ }

@@ -333,6 +333,28 @@ body {
 .palette-item svg { width: 16px; height: 16px; color: var(--accent); }
 .palette-item .k { margin-left: auto; font-size: .7rem; color: var(--text-3); }
 
+/* ---------- Powiadomienia (dzwonek) ---------- */
+.notify-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .62rem; font-weight: 800; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px var(--panel-solid); }
+#notify-btn, #m-notify { position: relative; }
+#notify-btn.has-unread svg, #m-notify.has-unread svg { color: var(--accent); }
+.notify-root { position: fixed; inset: 0; z-index: 128; display: none; justify-content: flex-end; align-items: flex-start; background: rgba(2,6,23,.5); backdrop-filter: blur(4px); }
+.notify-root.open { display: flex; }
+.notify-panel { width: min(94vw, 420px); max-height: 100vh; overflow: auto; background: var(--panel-solid); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow); padding: 16px; margin: 0; }
+.notify-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.notify-head svg { width: 18px; height: 18px; color: var(--accent); }
+.notify-enable { margin-bottom: 12px; }
+.notify-list { display: flex; flex-direction: column; gap: 6px; }
+.notify-item { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--border); }
+.notify-item svg { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px; color: var(--text-3); }
+.notify-item.ok svg { color: var(--ok); }
+.notify-item.err svg { color: var(--danger); }
+.notify-item.sync svg, .notify-item.link svg, .notify-item.google svg { color: var(--accent-2); }
+.ni-body { min-width: 0; }
+.ni-title { font-size: .84rem; color: var(--text); font-weight: 600; }
+.ni-detail { font-size: .78rem; color: var(--text-2); word-break: break-word; }
+.ni-time { font-size: .68rem; color: var(--text-3); margin-top: 2px; }
+@media (max-width: 680px) { .notify-panel { width: 100vw; border-left: 0; } }
+
 /* ---------- Mobile nav / FAB ---------- */
 .bottom-nav { display: none; }
 .fab { display: none; }

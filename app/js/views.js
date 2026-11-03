@@ -981,11 +981,12 @@
       '<li>Wejdź na <b>script.google.com</b> → <b>Nowy projekt</b>.</li>' +
       '<li>Wklej kod z pliku <span class="kbd">Code.gs</span> (dostałeś go razem z aplikacją).</li>' +
       '<li><b>Projekt → Ustawienia projektu → Właściwości skryptu</b> → dodaj <span class="kbd">SECRET</span> = Twój sekret.</li>' +
+      '<li>(opcjonalnie) dodaj <span class="kbd">OWNER_EMAIL</span> = Twój e-mail — dostaniesz powiadomienie, gdy połączy się nowe urządzenie.</li>' +
       '<li><b>Wdróż → Nowe wdrożenie</b> → typ <b>Aplikacja internetowa</b>.</li>' +
       '<li>„Wykonaj jako”: <b>Ja</b>; „Kto ma dostęp”: <b>Każdy</b> → wdróż i skopiuj adres <span class="kbd">/exec</span>.</li>' +
       '<li>Wklej adres i sekret poniżej, zapisz i kliknij <b>Test</b>.</li>' +
       '</ol>' +
-      '<p class="hint">Dane trafiają do arkusza <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie.</p>' +
+      '<p class="hint">Dane trafiają do arkusza <b>STOL-KOS Sync</b> w Twoim Google Drive. Aplikacja wysyła je automatycznie po każdej zmianie. Zdarzenia synchronizacji znajdziesz pod dzwonkiem 🔔 w nagłówku.</p>' +
       '</details>';
 
     return card('Baza na serwerze (Google)', 'cloud-upload', '<form data-form="sync" class="stack">' +
