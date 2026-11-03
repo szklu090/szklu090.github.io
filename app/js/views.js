@@ -1016,42 +1016,56 @@
     if (!A) return '';
     const u = A.user();
     if (!u) return '';
+    const onServer = A.serverAuth();
     return card('Konto', 'shield-check', '<div class="stack">' +
       '<div class="row between" style="gap:12px">' +
         '<div style="min-width:0"><b>' + esc(u.name) + '</b>' +
-        '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') + ' · konto na tym urządzeniu</div></div>' +
+        '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') +
+          (onServer ? ' · konto serwerowe' : ' · tryb lokalny') + '</div></div>' +
         '<button class="btn btn-sm" data-action="auth:logout">' + icon('log-out') + ' Wyloguj</button>' +
       '</div>' +
-      '<form data-form="auth-self-pass" class="stack">' +
-        '<div class="form-grid">' +
-          '<div class="field full"><label>Aktualne hasło</label><input class="input" type="password" name="current" autocomplete="current-password" required /></div>' +
-          '<div class="field"><label>Nowe hasło</label><input class="input" type="password" name="next" autocomplete="new-password" required /></div>' +
-          '<div class="field"><label>Powtórz nowe</label><input class="input" type="password" name="next2" autocomplete="new-password" required /></div>' +
-        '</div>' +
-        '<div class="row" style="justify-content:flex-end"><button class="btn btn-primary btn-sm" type="submit">' + icon('key-round') + ' Zmień hasło</button></div>' +
-      '</form></div>');
+      (onServer
+        ? '<form data-form="auth-self-pass" class="stack">' +
+            '<div class="form-grid">' +
+              '<div class="field full"><label>Aktualne hasło</label><input class="input" type="password" name="current" autocomplete="current-password" required /></div>' +
+              '<div class="field"><label>Nowe hasło</label><input class="input" type="password" name="next" autocomplete="new-password" required /></div>' +
+              '<div class="field"><label>Powtórz nowe</label><input class="input" type="password" name="next2" autocomplete="new-password" required /></div>' +
+            '</div>' +
+            '<div class="row" style="justify-content:flex-end"><button class="btn btn-primary btn-sm" type="submit">' + icon('key-round') + ' Zmień hasło</button></div>' +
+          '</form>'
+        : '<div class="hint">Serwer nie obsługuje jeszcze kont — wgraj nową wersję Code.gs, żeby zarządzać użytkownikami.</div>') +
+      '</div>');
   }
 
-  /** Panel właściciela: lista kont, dodawanie, zmiana nazw i haseł. */
+  /** Panel właściciela: konta na serwerze (dodawanie, nazwy, hasła, role). */
   function usersCard() {
     const A = SK.auth;
-    if (!A || !A.isOwner()) return '';
+    if (!A || !A.serverAuth() || !A.isOwner()) return '';
+    const loaded = A.usersLoaded();
     const list = A.list() || [];
+    const rows = loaded
+      ? (list.length
+        ? list.map(function (u) {
+            return '<div class="user-row">' +
+              '<div class="user-ava">' + esc(String(u.name || '?').slice(0, 1).toUpperCase()) + '</div>' +
+              '<div class="user-info"><b>' + esc(u.name) + '</b>' +
+              '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') + '</div></div>' +
+              '<div class="row" style="gap:4px">' +
+                '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-name" data-id="' + u.id + '" title="Zmień nazwę">' + icon('pencil') + '</button>' +
+                '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-pass" data-id="' + u.id + '" title="Zmień hasło">' + icon('key-round') + '</button>' +
+                '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-role" data-id="' + u.id + '" title="Zmień rolę">' + icon('shield') + '</button>' +
+                '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-del" data-id="' + u.id + '" title="Usuń konto">' + icon('trash-2') + '</button>' +
+              '</div></div>';
+          }).join('')
+        : '<p class="hint" style="margin:0">Brak dodatkowych kont.</p>')
+      : '<p class="hint" style="margin:0">Wczytywanie kont z serwera…</p>';
     return card('Użytkownicy', 'users', '<div class="stack">' +
-      '<p class="hint" style="margin:0">Właściciel może dodawać konta, zmieniać nazwy i hasła. Konta są zapisane tylko na tym urządzeniu.</p>' +
-      '<div class="stack">' + list.map(function (u) {
-        return '<div class="user-row">' +
-          '<div class="user-ava">' + esc(String(u.name || '?').slice(0, 1).toUpperCase()) + '</div>' +
-          '<div class="user-info"><b>' + esc(u.name) + '</b>' +
-          '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') + '</div></div>' +
-          '<div class="row" style="gap:4px">' +
-            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-name" data-id="' + u.id + '" title="Zmień nazwę">' + icon('pencil') + '</button>' +
-            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-pass" data-id="' + u.id + '" title="Zmień hasło">' + icon('key-round') + '</button>' +
-            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-role" data-id="' + u.id + '" title="Zmień rolę">' + icon('shield') + '</button>' +
-            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-del" data-id="' + u.id + '" title="Usuń konto">' + icon('trash-2') + '</button>' +
-          '</div></div>';
-      }).join('') + '</div>' +
-      '<button class="btn btn-primary btn-sm" data-action="auth:user-add">' + icon('user-plus') + ' Dodaj użytkownika</button>' +
+      '<p class="hint" style="margin:0">Konta są zapisane na serwerze i działają na każdym urządzeniu. Właściciel może dodawać konta, zmieniać nazwy, hasła i role.</p>' +
+      '<div class="stack">' + rows + '</div>' +
+      '<div class="row wrap">' +
+        '<button class="btn btn-primary btn-sm" data-action="auth:user-add">' + icon('user-plus') + ' Dodaj użytkownika</button>' +
+        '<button class="btn btn-sm" data-action="auth:users-refresh">' + icon('refresh-cw') + ' Odśwież</button>' +
+      '</div>' +
     '</div>');
   }
 
@@ -1125,7 +1139,7 @@
       '</div>');
 
     const about = card('O aplikacji', 'info', '<div class="stack" style="font-size:.86rem">' +
-      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.6</b></div>' +
+      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.7</b></div>' +
       '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">localStorage</b></div>' +
       '<div class="row between"><span class="muted">Tryb</span><b>offline-first (PWA)</b></div>' +
       '<div class="hint">Skróty: <span class="kbd">Ctrl K</span> paleta · <span class="kbd">N</span> nowy wpis · <span class="kbd">Esc</span> zamknij.</div>' +

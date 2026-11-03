@@ -468,8 +468,17 @@
   }
 
   /* ============================================================
-     Logowanie i konta (SK.auth)
+     Logowanie i konta (SK.auth — konta na serwerze)
      ============================================================ */
+  /** Zapisuje sekret bazy, gdy użytkownik wpisał go na ekranie logowania. */
+  function authSaveSecret(f) {
+    if (!f || !f.secret) return;
+    const st = S.get();
+    st.settings.sync = st.settings.sync || {};
+    st.settings.sync.token = String(f.secret);
+    S.save();
+  }
+
   function authLogin(form) {
     if (!SK.auth) return;
     const f = U.formToObject(form);
@@ -485,21 +494,46 @@
       }
       U.toast('Zalogowano jako ' + r.user.name, 'ok');
       refresh();
-    }).catch(function () { if (btn) btn.disabled = false; });
+    }).catch(function (e) {
+      if (btn) btn.disabled = false;
+      SK.auth.showError(e.message || 'Błąd logowania');
+    });
   }
 
   function authSetup(form) {
     if (!SK.auth) return;
     const f = U.formToObject(form);
     if (f.password !== f.password2) { SK.auth.showError('Hasła nie są takie same.'); return; }
+    authSaveSecret(f);
     const btn = form.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
-    SK.auth.setup(f.username, f.password, !!f.remember).then(function (r) {
+    SK.auth.setup(f.username, f.password).then(function (r) {
       if (btn) btn.disabled = false;
       if (!r.ok) { SK.auth.showError(r.error); return; }
-      U.toast('Konto właściciela utworzone', 'ok');
+      U.toast('Konto właściciela utworzone na serwerze', 'ok');
       refresh();
-    }).catch(function () { if (btn) btn.disabled = false; });
+    }).catch(function (e) {
+      if (btn) btn.disabled = false;
+      SK.auth.showError(e.message || 'Błąd');
+    });
+  }
+
+  function authRecover(form) {
+    if (!SK.auth) return;
+    const f = U.formToObject(form);
+    if (f.password !== f.password2) { SK.auth.showError('Hasła nie są takie same.'); return; }
+    authSaveSecret(f);
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    SK.auth.recover(f.username, f.password).then(function (r) {
+      if (btn) btn.disabled = false;
+      if (!r.ok) { SK.auth.showError(r.error); return; }
+      U.toast('Hasło zmienione — zaloguj się', 'ok');
+      SK.auth.showLogin();
+    }).catch(function (e) {
+      if (btn) btn.disabled = false;
+      SK.auth.showError(e.message || 'Błąd');
+    });
   }
 
   function openUserAdd() {
@@ -540,36 +574,41 @@
 
   function authUserAdd(form) {
     const f = U.formToObject(form);
-    const r = SK.auth.addUser(f.username, f.password, f.role);
-    if (!r.ok) { U.toast(r.error, 'err'); return; }
-    U.closeModal();
-    U.toast('Dodano użytkownika ' + r.user.name, 'ok');
-    refresh();
+    U.toast('Zapisuję konto na serwerze…');
+    SK.auth.addUser(f.username, f.password, f.role).then(function (r) {
+      if (!r.ok) { U.toast(r.error, 'err'); return; }
+      U.closeModal();
+      U.toast('Dodano użytkownika ' + r.user.name, 'ok');
+      refresh();
+    });
   }
   function authUserName(form) {
     const f = U.formToObject(form);
-    const r = SK.auth.renameUser(form.dataset.id, f.username);
-    if (!r.ok) { U.toast(r.error, 'err'); return; }
-    U.closeModal();
-    U.toast('Nazwa zmieniona', 'ok');
-    refresh();
+    SK.auth.renameUser(form.dataset.id, f.username).then(function (r) {
+      if (!r.ok) { U.toast(r.error, 'err'); return; }
+      U.closeModal();
+      U.toast('Nazwa zmieniona', 'ok');
+      refresh();
+    });
   }
   function authUserPass(form) {
     const f = U.formToObject(form);
     if (f.password !== f.password2) { U.toast('Hasła nie są takie same', 'err'); return; }
-    const r = SK.auth.setPassword(form.dataset.id, f.password);
-    if (!r.ok) { U.toast(r.error, 'err'); return; }
-    U.closeModal();
-    U.toast('Hasło zmienione', 'ok');
-    refresh();
+    SK.auth.setPassword(form.dataset.id, f.password).then(function (r) {
+      if (!r.ok) { U.toast(r.error, 'err'); return; }
+      U.closeModal();
+      U.toast('Hasło zmienione', 'ok');
+      refresh();
+    });
   }
   function authSelfPass(form) {
     const f = U.formToObject(form);
     if (f.next !== f.next2) { U.toast('Nowe hasła nie są takie same', 'err'); return; }
-    const r = SK.auth.changeOwnPassword(f.current, f.next);
-    if (!r.ok) { U.toast(r.error, 'err'); return; }
-    form.reset();
-    U.toast('Hasło zmienione', 'ok');
+    SK.auth.changeOwnPassword(f.current, f.next).then(function (r) {
+      if (!r.ok) { U.toast(r.error, 'err'); return; }
+      form.reset();
+      U.toast('Hasło zmienione', 'ok');
+    });
   }
 
   /* ============================================================
@@ -897,7 +936,7 @@
       const u = String(c.url || '').trim();
       if (!u) { U.toast('Najpierw wpisz adres Web App i zapisz', 'err'); return; }
       const q = new root.URLSearchParams();
-      q.set('v', '40');
+      q.set('v', '41');
       q.set('sync', u);
       if (c.token) q.set('secret', c.token);
       if (c.auto === false) q.set('auto', '0');
@@ -933,24 +972,29 @@
       });
     },
 
-    // Logowanie / konta
+    // Logowanie / konta (serwer)
     'auth:logout': function () {
       if (!SK.auth) return;
       U.confirmDialog('Wylogować się?', { title: 'Wyloguj', confirmLabel: 'Wyloguj' }).then(function (ok) {
         if (!ok) return;
-        SK.auth.logout();
-        U.toast('Wylogowano', 'ok');
+        SK.auth.logout().then(function () { U.toast('Wylogowano', 'ok'); });
       });
     },
-    'auth:reset': function () {
+    'auth:recover': function () { if (SK.auth) SK.auth.showRecover(); },
+    'auth:show-login': function () { if (SK.auth) SK.auth.showLogin(); },
+    'auth:retry': function () {
       if (!SK.auth) return;
-      U.confirmDialog('Zresetować konta na tym urządzeniu? Dane aplikacji (wpisy, projekty) pozostaną. Będziesz mógł utworzyć nowe konto właściciela.', {
-        title: 'Reset kont', danger: true, confirmLabel: 'Resetuj konta',
-      }).then(function (ok) {
-        if (!ok) return;
-        SK.auth.resetAll();
-        U.toast('Konta zresetowane — utwórz nowe konto właściciela', 'ok');
-      });
+      U.toast('Sprawdzam serwer…');
+      SK.auth.retry();
+    },
+    'auth:legacy': function () {
+      if (!SK.auth) return;
+      SK.auth.legacyEnter();
+      U.toast('Wejście bez kont (serwer bez obsługi logowania)', 'info');
+    },
+    'auth:users-refresh': function () {
+      if (!SK.auth) return;
+      SK.auth.loadUsers().then(function () { refresh(); });
     },
     'auth:show-pass': function (el) {
       const wrap = el.closest('.auth-pass');
@@ -975,10 +1019,11 @@
       const u = (SK.auth.list() || []).filter(function (x) { return x.id === id; })[0];
       if (!u) return;
       const next = u.role === 'owner' ? 'user' : 'owner';
-      const r = SK.auth.setRole(id, next);
-      if (!r.ok) { U.toast(r.error, 'err'); return; }
-      U.toast(next === 'owner' ? 'Nadano uprawnienia właściciela' : 'Odebrano uprawnienia właściciela', 'ok');
-      refresh();
+      SK.auth.setRole(id, next).then(function (r) {
+        if (!r.ok) { U.toast(r.error, 'err'); return; }
+        U.toast(next === 'owner' ? 'Nadano uprawnienia właściciela' : 'Odebrano uprawnienia właściciela', 'ok');
+        refresh();
+      });
     },
     'auth:user-del': function (el) {
       const id = el.dataset.id;
@@ -987,10 +1032,11 @@
       U.confirmDialog('Usunąć konto „' + u.name + '”?', { title: 'Usuń konto', danger: true, confirmLabel: 'Usuń' })
         .then(function (ok) {
           if (!ok) return;
-          const r = SK.auth.removeUser(id);
-          if (!r.ok) { U.toast(r.error, 'err'); return; }
-          U.toast('Konto usunięte', 'ok');
-          refresh();
+          SK.auth.removeUser(id).then(function (r) {
+            if (!r.ok) { U.toast(r.error, 'err'); return; }
+            U.toast('Konto usunięte', 'ok');
+            refresh();
+          });
         });
     },
 
@@ -1025,6 +1071,7 @@
     sync: saveSync,
     'auth-login': authLogin,
     'auth-setup': authSetup,
+    'auth-recover': authRecover,
     'auth-user-add': authUserAdd,
     'auth-user-name': authUserName,
     'auth-user-pass': authUserPass,
