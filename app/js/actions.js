@@ -468,6 +468,111 @@
   }
 
   /* ============================================================
+     Logowanie i konta (SK.auth)
+     ============================================================ */
+  function authLogin(form) {
+    if (!SK.auth) return;
+    const f = U.formToObject(form);
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    SK.auth.login(f.username, f.password, !!f.remember).then(function (r) {
+      if (btn) btn.disabled = false;
+      if (!r.ok) {
+        SK.auth.showError(r.error);
+        const p = form.elements.password;
+        if (p) { p.value = ''; try { p.focus(); } catch (e) { /* ignore */ } }
+        return;
+      }
+      U.toast('Zalogowano jako ' + r.user.name, 'ok');
+      refresh();
+    }).catch(function () { if (btn) btn.disabled = false; });
+  }
+
+  function authSetup(form) {
+    if (!SK.auth) return;
+    const f = U.formToObject(form);
+    if (f.password !== f.password2) { SK.auth.showError('Hasła nie są takie same.'); return; }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    SK.auth.setup(f.username, f.password, !!f.remember).then(function (r) {
+      if (btn) btn.disabled = false;
+      if (!r.ok) { SK.auth.showError(r.error); return; }
+      U.toast('Konto właściciela utworzone', 'ok');
+      refresh();
+    }).catch(function () { if (btn) btn.disabled = false; });
+  }
+
+  function openUserAdd() {
+    U.openModal({
+      title: 'Dodaj użytkownika',
+      body: '<form data-form="auth-user-add" class="stack">' +
+        '<div class="field"><label>Nazwa użytkownika</label><input class="input" name="username" autocomplete="off" required /></div>' +
+        '<div class="field"><label>Hasło</label><input class="input" type="password" name="password" autocomplete="new-password" required /></div>' +
+        '<div class="field"><label>Rola</label><select class="select" name="role"><option value="user">Użytkownik</option><option value="owner">Właściciel</option></select></div>' +
+        '<div class="row mt" style="justify-content:flex-end"><button type="button" class="btn btn-ghost" data-close>Anuluj</button>' +
+        '<button type="submit" class="btn btn-primary">' + icon('user-plus') + ' Dodaj</button></div>' +
+        '</form>',
+    });
+  }
+
+  function openUserRename(u) {
+    U.openModal({
+      title: 'Zmień nazwę użytkownika',
+      body: '<form data-form="auth-user-name" data-id="' + u.id + '" class="stack">' +
+        '<div class="field"><label>Nazwa użytkownika</label><input class="input" name="username" value="' + esc(u.name) + '" required /></div>' +
+        '<div class="row mt" style="justify-content:flex-end"><button type="button" class="btn btn-ghost" data-close>Anuluj</button>' +
+        '<button type="submit" class="btn btn-primary">' + icon('save') + ' Zapisz</button></div>' +
+        '</form>',
+    });
+  }
+
+  function openUserPassword(u) {
+    U.openModal({
+      title: 'Nowe hasło — ' + u.name,
+      body: '<form data-form="auth-user-pass" data-id="' + u.id + '" class="stack">' +
+        '<div class="field"><label>Nowe hasło</label><input class="input" type="password" name="password" autocomplete="new-password" required /></div>' +
+        '<div class="field"><label>Powtórz hasło</label><input class="input" type="password" name="password2" autocomplete="new-password" required /></div>' +
+        '<div class="row mt" style="justify-content:flex-end"><button type="button" class="btn btn-ghost" data-close>Anuluj</button>' +
+        '<button type="submit" class="btn btn-primary">' + icon('key-round') + ' Zmień hasło</button></div>' +
+        '</form>',
+    });
+  }
+
+  function authUserAdd(form) {
+    const f = U.formToObject(form);
+    const r = SK.auth.addUser(f.username, f.password, f.role);
+    if (!r.ok) { U.toast(r.error, 'err'); return; }
+    U.closeModal();
+    U.toast('Dodano użytkownika ' + r.user.name, 'ok');
+    refresh();
+  }
+  function authUserName(form) {
+    const f = U.formToObject(form);
+    const r = SK.auth.renameUser(form.dataset.id, f.username);
+    if (!r.ok) { U.toast(r.error, 'err'); return; }
+    U.closeModal();
+    U.toast('Nazwa zmieniona', 'ok');
+    refresh();
+  }
+  function authUserPass(form) {
+    const f = U.formToObject(form);
+    if (f.password !== f.password2) { U.toast('Hasła nie są takie same', 'err'); return; }
+    const r = SK.auth.setPassword(form.dataset.id, f.password);
+    if (!r.ok) { U.toast(r.error, 'err'); return; }
+    U.closeModal();
+    U.toast('Hasło zmienione', 'ok');
+    refresh();
+  }
+  function authSelfPass(form) {
+    const f = U.formToObject(form);
+    if (f.next !== f.next2) { U.toast('Nowe hasła nie są takie same', 'err'); return; }
+    const r = SK.auth.changeOwnPassword(f.current, f.next);
+    if (!r.ok) { U.toast(r.error, 'err'); return; }
+    form.reset();
+    U.toast('Hasło zmienione', 'ok');
+  }
+
+  /* ============================================================
      Formularze ustawień
      ============================================================ */
   function saveProfile(form) {
@@ -792,7 +897,7 @@
       const u = String(c.url || '').trim();
       if (!u) { U.toast('Najpierw wpisz adres Web App i zapisz', 'err'); return; }
       const q = new root.URLSearchParams();
-      q.set('v', '39');
+      q.set('v', '40');
       q.set('sync', u);
       if (c.token) q.set('secret', c.token);
       if (c.auto === false) q.set('auto', '0');
@@ -828,6 +933,67 @@
       });
     },
 
+    // Logowanie / konta
+    'auth:logout': function () {
+      if (!SK.auth) return;
+      U.confirmDialog('Wylogować się?', { title: 'Wyloguj', confirmLabel: 'Wyloguj' }).then(function (ok) {
+        if (!ok) return;
+        SK.auth.logout();
+        U.toast('Wylogowano', 'ok');
+      });
+    },
+    'auth:reset': function () {
+      if (!SK.auth) return;
+      U.confirmDialog('Zresetować konta na tym urządzeniu? Dane aplikacji (wpisy, projekty) pozostaną. Będziesz mógł utworzyć nowe konto właściciela.', {
+        title: 'Reset kont', danger: true, confirmLabel: 'Resetuj konta',
+      }).then(function (ok) {
+        if (!ok) return;
+        SK.auth.resetAll();
+        U.toast('Konta zresetowane — utwórz nowe konto właściciela', 'ok');
+      });
+    },
+    'auth:show-pass': function (el) {
+      const wrap = el.closest('.auth-pass');
+      const input = wrap ? wrap.querySelector('input') : null;
+      if (!input) return;
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      el.innerHTML = icon(show ? 'eye-off' : 'eye');
+      U.refresh();
+    },
+    'auth:user-add': openUserAdd,
+    'auth:user-name': function (el) {
+      const u = (SK.auth.list() || []).filter(function (x) { return x.id === el.dataset.id; })[0];
+      if (u) openUserRename(u);
+    },
+    'auth:user-pass': function (el) {
+      const u = (SK.auth.list() || []).filter(function (x) { return x.id === el.dataset.id; })[0];
+      if (u) openUserPassword(u);
+    },
+    'auth:user-role': function (el) {
+      const id = el.dataset.id;
+      const u = (SK.auth.list() || []).filter(function (x) { return x.id === id; })[0];
+      if (!u) return;
+      const next = u.role === 'owner' ? 'user' : 'owner';
+      const r = SK.auth.setRole(id, next);
+      if (!r.ok) { U.toast(r.error, 'err'); return; }
+      U.toast(next === 'owner' ? 'Nadano uprawnienia właściciela' : 'Odebrano uprawnienia właściciela', 'ok');
+      refresh();
+    },
+    'auth:user-del': function (el) {
+      const id = el.dataset.id;
+      const u = (SK.auth.list() || []).filter(function (x) { return x.id === id; })[0];
+      if (!u) return;
+      U.confirmDialog('Usunąć konto „' + u.name + '”?', { title: 'Usuń konto', danger: true, confirmLabel: 'Usuń' })
+        .then(function (ok) {
+          if (!ok) return;
+          const r = SK.auth.removeUser(id);
+          if (!r.ok) { U.toast(r.error, 'err'); return; }
+          U.toast('Konto usunięte', 'ok');
+          refresh();
+        });
+    },
+
     'data:export-json': exportJson,
     'data:import-json': importJson,
     'data:import-csv': importCsv,
@@ -857,6 +1023,12 @@
     work: saveWork,
     google: saveGoogle,
     sync: saveSync,
+    'auth-login': authLogin,
+    'auth-setup': authSetup,
+    'auth-user-add': authUserAdd,
+    'auth-user-name': authUserName,
+    'auth-user-pass': authUserPass,
+    'auth-self-pass': authSelfPass,
   };
 
   function run(name, el, event) {

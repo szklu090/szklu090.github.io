@@ -1010,6 +1010,51 @@
       '</form>');
   }
 
+  /** Karta zalogowanego użytkownika (widoczna po zalogowaniu). */
+  function accountCard() {
+    const A = SK.auth;
+    if (!A) return '';
+    const u = A.user();
+    if (!u) return '';
+    return card('Konto', 'shield-check', '<div class="stack">' +
+      '<div class="row between" style="gap:12px">' +
+        '<div style="min-width:0"><b>' + esc(u.name) + '</b>' +
+        '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') + ' · konto na tym urządzeniu</div></div>' +
+        '<button class="btn btn-sm" data-action="auth:logout">' + icon('log-out') + ' Wyloguj</button>' +
+      '</div>' +
+      '<form data-form="auth-self-pass" class="stack">' +
+        '<div class="form-grid">' +
+          '<div class="field full"><label>Aktualne hasło</label><input class="input" type="password" name="current" autocomplete="current-password" required /></div>' +
+          '<div class="field"><label>Nowe hasło</label><input class="input" type="password" name="next" autocomplete="new-password" required /></div>' +
+          '<div class="field"><label>Powtórz nowe</label><input class="input" type="password" name="next2" autocomplete="new-password" required /></div>' +
+        '</div>' +
+        '<div class="row" style="justify-content:flex-end"><button class="btn btn-primary btn-sm" type="submit">' + icon('key-round') + ' Zmień hasło</button></div>' +
+      '</form></div>');
+  }
+
+  /** Panel właściciela: lista kont, dodawanie, zmiana nazw i haseł. */
+  function usersCard() {
+    const A = SK.auth;
+    if (!A || !A.isOwner()) return '';
+    const list = A.list() || [];
+    return card('Użytkownicy', 'users', '<div class="stack">' +
+      '<p class="hint" style="margin:0">Właściciel może dodawać konta, zmieniać nazwy i hasła. Konta są zapisane tylko na tym urządzeniu.</p>' +
+      '<div class="stack">' + list.map(function (u) {
+        return '<div class="user-row">' +
+          '<div class="user-ava">' + esc(String(u.name || '?').slice(0, 1).toUpperCase()) + '</div>' +
+          '<div class="user-info"><b>' + esc(u.name) + '</b>' +
+          '<div class="hint">' + (u.role === 'owner' ? 'Właściciel' : 'Użytkownik') + '</div></div>' +
+          '<div class="row" style="gap:4px">' +
+            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-name" data-id="' + u.id + '" title="Zmień nazwę">' + icon('pencil') + '</button>' +
+            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-pass" data-id="' + u.id + '" title="Zmień hasło">' + icon('key-round') + '</button>' +
+            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-role" data-id="' + u.id + '" title="Zmień rolę">' + icon('shield') + '</button>' +
+            '<button class="btn btn-icon btn-ghost btn-sm" data-action="auth:user-del" data-id="' + u.id + '" title="Usuń konto">' + icon('trash-2') + '</button>' +
+          '</div></div>';
+      }).join('') + '</div>' +
+      '<button class="btn btn-primary btn-sm" data-action="auth:user-add">' + icon('user-plus') + ' Dodaj użytkownika</button>' +
+    '</div>');
+  }
+
   function settings() {
     const st = S.get();
     const sym = C.symbol(st.profile.currency);
@@ -1080,13 +1125,13 @@
       '</div>');
 
     const about = card('O aplikacji', 'info', '<div class="stack" style="font-size:.86rem">' +
-      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.5</b></div>' +
+      '<div class="row between"><span class="muted">Wersja</span><b>STOL-KOS 3.6</b></div>' +
       '<div class="row between"><span class="muted">Magazyn</span><b id="storage-info2">localStorage</b></div>' +
       '<div class="row between"><span class="muted">Tryb</span><b>offline-first (PWA)</b></div>' +
       '<div class="hint">Skróty: <span class="kbd">Ctrl K</span> paleta · <span class="kbd">N</span> nowy wpis · <span class="kbd">Esc</span> zamknij.</div>' +
       '</div>');
 
-    return '<div class="grid g-2">' + profile + goals + work + googleCard() + syncCard() + templates + appearance + data + about + '</div>';
+    return '<div class="grid g-2">' + profile + accountCard() + usersCard() + goals + work + googleCard() + syncCard() + templates + appearance + data + about + '</div>';
   }
 
   /* ============================================================

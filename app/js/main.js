@@ -38,6 +38,14 @@
     const nc = doc.getElementById('nav-count-entries');
     if (nc) nc.textContent = st.entries.length ? String(st.entries.length) : '';
 
+    const authUser = SK.auth && SK.auth.user ? SK.auth.user() : null;
+    const authLabel = doc.getElementById('auth-user-label');
+    if (authLabel) {
+      authLabel.textContent = authUser
+        ? authUser.name + (authUser.role === 'owner' ? ' · właściciel' : '')
+        : 'Niezalogowany';
+    }
+
     try {
       const bytes = new Blob([localStorage.getItem(S.KEY) || '']).size;
       const label = (bytes / 1024).toFixed(1) + ' kB';
@@ -137,6 +145,9 @@
       { label: 'Dane demonstracyjne', ico: 'wand-2', hint: 'dane', run: function () { A.run('data:demo'); } },
       { label: 'Wyczyść dane', ico: 'trash-2', hint: 'dane', run: function () { A.run('data:clear'); } },
     ];
+    if (SK.auth && SK.auth.user && SK.auth.user()) {
+      items.push({ label: 'Wyloguj', ico: 'log-out', hint: 'konto', run: function () { A.run('auth:logout'); } });
+    }
     S.get().entries.slice(-40).reverse().forEach(function (e) {
       items.push({
         label: (e.note || V.projectName(e.projectId)) + ' · ' + e.date + ' ' + e.start + '–' + e.end,
@@ -218,13 +229,15 @@
   function wire() {
     // nawigacja + akcje
     doc.addEventListener('click', function (e) {
+      const locked = !!(SK.auth && SK.auth.locked && SK.auth.locked());
       const pageBtn = e.target.closest('[data-page]');
-      if (pageBtn) { e.preventDefault(); go(pageBtn.dataset.page); return; }
+      if (pageBtn) { if (locked) return; e.preventDefault(); go(pageBtn.dataset.page); return; }
 
       const act = e.target.closest('[data-action]');
       if (act) {
-        e.preventDefault();
         const name = act.dataset.action;
+        if (locked && name.indexOf('auth:') !== 0) return;
+        e.preventDefault();
         if (name === 'pwa:install') { installPwa(); return; }
         A.run(name, act, e);
         return;
@@ -256,6 +269,7 @@
 
     // klawiatura
     doc.addEventListener('keydown', function (e) {
+      if (SK.auth && SK.auth.locked && SK.auth.locked()) return;
       const tag = (e.target.tagName || '').toLowerCase();
       const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); return; }
@@ -373,6 +387,14 @@
   function init() {
     const st = S.load();
     U.applyTheme(st.profile.theme || 'dark');
+    // Logowanie: ekran logowania / pierwsza konfiguracja konta.
+    try { if (SK.auth && SK.auth.init) SK.auth.init(); } catch (e) { /* ignore */ }
+    if (SK.auth && SK.auth.onChange) {
+      SK.auth.onChange(function () {
+        updateChrome();
+        if (!SK.auth.locked()) refresh();
+      });
+    }
     const linkedUrl = applySyncFromUrl();
 
     const h = (root.location.hash || '').replace('#', '');

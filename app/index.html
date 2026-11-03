@@ -25,13 +25,16 @@
   </script>
 
   <!-- Tailwind (lokalny build, offline) + własny design system -->
-  <link rel="stylesheet" href="tailwind.css?v=39" />
-  <link rel="stylesheet" href="css/app.css?v=39" />
+  <link rel="stylesheet" href="tailwind.css?v=40" />
+  <link rel="stylesheet" href="css/app.css?v=40" />
 
   <!-- Lucide (lokalnie, offline) -->
-  <script src="lucide.js?v=39"></script>
+  <script src="lucide.js?v=40"></script>
 </head>
 <body>
+
+  <!-- ekran logowania (renderowany przez js/auth.js) -->
+  <div class="auth-root" id="auth-root"></div>
 
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -68,12 +71,16 @@
       <button class="nav-item" data-page="settings"><i data-lucide="settings-2"></i><span>Ustawienia</span></button>
 
       <div class="sidebar-foot">
+        <div class="row between" id="auth-chip" style="padding:4px 8px 10px">
+          <span class="dim" id="auth-user-label" style="font-size:.7rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Niezalogowany</span>
+          <button class="btn btn-icon btn-ghost" data-action="auth:logout" title="Wyloguj" aria-label="Wyloguj"><i data-lucide="log-out"></i></button>
+        </div>
         <div class="row between" style="padding:4px 8px 10px">
           <span class="dim" style="font-size:.7rem">Motyw</span>
           <button class="btn btn-icon btn-ghost" id="theme-toggle" title="Przełącz motyw" aria-label="Przełącz motyw"><i data-lucide="moon"></i></button>
         </div>
         <div class="row between" style="padding:0 8px">
-          <span class="dim" style="font-size:.68rem">STOL-KOS v3.5</span>
+          <span class="dim" style="font-size:.68rem">STOL-KOS v3.6</span>
           <span class="dim" style="font-size:.68rem" id="storage-info">offline</span>
         </div>
       </div>
@@ -81,24 +88,15 @@
 
     <!-- ================= MAIN ================= -->
     <div class="main">
-      <!-- mobile header -->
-      <div class="mobile-top">
-        <div class="brand-logo" style="width:34px;height:34px;border-radius:11px"><i data-lucide="clock-3"></i></div>
-        <div class="brand-title">STOL-KOS</div>
-        <div class="topbar-actions">
-          <button class="btn btn-icon btn-ghost" id="m-notify" title="Powiadomienia" aria-label="Powiadomienia"><i data-lucide="bell"></i><span class="notify-badge" id="m-notify-badge" hidden></span></button>
-          <button class="btn btn-icon btn-ghost" id="m-theme-toggle" title="Motyw"><i data-lucide="moon"></i></button>
-          <button class="btn btn-icon btn-ghost" id="m-search" title="Szukaj"><i data-lucide="search"></i></button>
-        </div>
-      </div>
-
       <header class="topbar">
-        <div>
+        <div class="brand-logo topbar-brand only-mobile"><i data-lucide="clock-3"></i></div>
+        <div class="topbar-title">
           <h1 id="page-title">Pulpit</h1>
           <div class="sub" id="page-sub">Przegląd Twojej pracy</div>
         </div>
         <div class="topbar-actions">
           <button class="btn btn-icon btn-ghost" id="notify-btn" title="Powiadomienia" aria-label="Powiadomienia"><i data-lucide="bell"></i><span class="notify-badge" id="notify-badge" hidden></span></button>
+          <button class="btn btn-icon btn-ghost only-mobile" id="m-theme-toggle" title="Motyw" aria-label="Motyw"><i data-lucide="moon"></i></button>
           <button class="btn btn-ghost btn-sm" id="palette-btn" title="Szybkie polecenia (Ctrl+K)">
             <i data-lucide="search"></i><span class="nowrap">Szukaj</span><span class="kbd">Ctrl K</span>
           </button>
@@ -143,14 +141,15 @@
   </div>
 
   <!-- skrypty aplikacji (v=35 — wymusza świeże pliki zamiast starego cache) -->
-  <script src="js/compute.js?v=39"></script>
-  <script src="js/store.js?v=39"></script>
-  <script src="js/google.js?v=39"></script>
-  <script src="js/sync.js?v=39"></script>
-  <script src="js/ui.js?v=39"></script>
-  <script src="js/notify.js?v=39"></script>
-  <script src="js/views.js?v=39"></script>
-  <script src="js/actions.js?v=39"></script>
-  <script src="js/main.js?v=39"></script>
+  <script src="js/compute.js?v=40"></script>
+  <script src="js/store.js?v=40"></script>
+  <script src="js/google.js?v=40"></script>
+  <script src="js/sync.js?v=40"></script>
+  <script src="js/ui.js?v=40"></script>
+  <script src="js/notify.js?v=40"></script>
+  <script src="js/auth.js?v=40"></script>
+  <script src="js/views.js?v=40"></script>
+  <script src="js/actions.js?v=40"></script>
+  <script src="js/main.js?v=40"></script>
 </body>
 </html>
